@@ -8,7 +8,7 @@ import { BacklogItemCard } from '@/components/backlog-item-card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
-import { LogOut, RefreshCw, User, Search, Calendar, BarChart2, Filter } from 'lucide-react'
+import { LogOut, RefreshCw, User, Search, Calendar, BarChart2, Filter, ClockArrowUp } from 'lucide-react'
 import { toast } from 'sonner'
 import { TotalsView, ClienteGroup } from '@/components/totals-view'
 import { WeekProgress } from '@/components/week-progress'
@@ -100,9 +100,7 @@ export default function DashboardPage() {
         <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="bg-blue-600 text-white rounded-lg p-1.5">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M0 12L2.4 5.4 5 11.4 9 1 12 11H24L13.5 17.6 16.4 24 12 20.6 7.6 24 10.5 17.6Z" />
-              </svg>
+              <ClockArrowUp className="w-5 h-5" />
             </div>
             <span className="font-bold text-gray-900">AzuHours</span>
           </div>

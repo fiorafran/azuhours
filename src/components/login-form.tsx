@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAuth } from '@/hooks/use-auth'
-import { Eye, EyeOff, Loader2 } from 'lucide-react'
+import { Eye, EyeOff, Loader2, ClockArrowUp } from 'lucide-react'
 
 export function LoginForm() {
   const [pat, setPat] = useState('')
@@ -55,9 +55,7 @@ export function LoginForm() {
         <CardHeader className="text-center pb-2">
           <div className="flex justify-center mb-3">
             <div className="bg-blue-600 text-white rounded-xl p-3">
-              <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M0 12L2.4 5.4 5 11.4 9 1 12 11H24L13.5 17.6 16.4 24 12 20.6 7.6 24 10.5 17.6Z" />
-              </svg>
+              <ClockArrowUp className="w-8 h-8" />
             </div>
           </div>
           <CardTitle className="text-2xl font-bold text-gray-900">AzuHours</CardTitle>
