@@ -1,0 +1,277 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/hooks/use-auth'
+import { BacklogItem } from '@/lib/types'
+import { BacklogItemCard } from '@/components/backlog-item-card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Skeleton } from '@/components/ui/skeleton'
+import { LogOut, RefreshCw, User, Search, Calendar, BarChart2, Filter } from 'lucide-react'
+import { toast } from 'sonner'
+import { TotalsView, ClienteGroup } from '@/components/totals-view'
+import { WeekProgress } from '@/components/week-progress'
+
+type Tab = 'semana' | 'totales'
+
+export default function DashboardPage() {
+  const { config, user, loaded, logout } = useAuth()
+  const router = useRouter()
+
+  // Semana tab state
+  const [items, setItems] = useState<BacklogItem[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [weekInput, setWeekInput] = useState('')
+  const [activeWeek, setActiveWeek] = useState('')
+  const [weeklyHours, setWeeklyHours] = useState(0)
+  const [nameFilter, setNameFilter] = useState('')
+
+  // Totales tab state — lifted here so it persists across tab switches
+  const [totalesData, setTotalesData] = useState<ClienteGroup[]>([])
+  const [totalesFrom, setTotalesFrom] = useState('')
+  const [totalesTo, setTotalesTo] = useState('')
+
+  const [tab, setTab] = useState<Tab>('semana')
+
+  useEffect(() => {
+    if (loaded && !config) router.push('/')
+  }, [loaded, config, router])
+
+  async function loadItems(week: string) {
+    if (!config || !week.trim()) return
+    setLoading(true)
+    setError('')
+    setItems([])
+    setWeeklyHours(0)
+    setNameFilter('')
+    try {
+      const params = new URLSearchParams({ week: week.trim() })
+      const res = await fetch(`/api/azure/work-items?${params}`, {
+        headers: {
+          'x-azure-pat': config.pat,
+          'x-azure-org': config.org,
+          'x-azure-project': config.project,
+        },
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || 'Error al cargar')
+        return
+      }
+      setItems(data)
+      // Calculate initial weekly hours from pre-loaded lineas
+      const total = data.reduce((sum: number, ticket: BacklogItem) =>
+        sum + (ticket.weekTasks || []).reduce((s2, wt) =>
+          s2 + (wt.tasks || []).reduce((s3, task) =>
+            s3 + ((task.lineas as { horasLineaProyecto?: number }[]) || [])
+              .reduce((s4, l) => s4 + (l.horasLineaProyecto || 0), 0)
+          , 0)
+        , 0)
+      , 0)
+      setWeeklyHours(total)
+      if (data.length === 0) toast.info(`No se encontraron tareas para "${week.trim()}"`)
+    } catch {
+      setError('Error de conexión')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault()
+    if (!weekInput.trim()) return
+    setActiveWeek(weekInput.trim())
+    loadItems(weekInput.trim())
+  }
+
+  function handleLogout() {
+    logout()
+    router.push('/')
+  }
+
+  if (!loaded) return null
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="bg-blue-600 text-white rounded-lg p-1.5">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M0 12L2.4 5.4 5 11.4 9 1 12 11H24L13.5 17.6 16.4 24 12 20.6 7.6 24 10.5 17.6Z" />
+              </svg>
+            </div>
+            <span className="font-bold text-gray-900">AzuHours</span>
+          </div>
+          <div className="flex items-center gap-3">
+            {user && (
+              <div className="flex items-center gap-1.5 text-sm text-gray-600">
+                <User className="w-4 h-4" />
+                <span className="hidden sm:inline">{user.displayName}</span>
+              </div>
+            )}
+            {tab === 'semana' && activeWeek && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => loadItems(activeWeek)}
+                disabled={loading}
+                className="text-gray-500"
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLogout}
+              className="text-gray-500 hover:text-red-600"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline ml-1">Salir</span>
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      {/* Content */}
+      <main className="max-w-4xl mx-auto px-4 py-6">
+        <div className="mb-6">
+          <h1 className="text-xl font-bold text-gray-900">
+            {tab === 'semana' ? 'Mis tareas' : 'Horas por proyecto'}
+          </h1>
+          <p className="text-sm text-gray-500 mt-0.5">{config?.org} / {config?.project}</p>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-1 mb-6 bg-gray-100 rounded-lg p-1 w-fit">
+          <button
+            onClick={() => setTab('semana')}
+            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              tab === 'semana' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Calendar className="w-4 h-4" />
+            Por semana
+          </button>
+          <button
+            onClick={() => setTab('totales')}
+            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              tab === 'totales' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <BarChart2 className="w-4 h-4" />
+            Totales
+          </button>
+        </div>
+
+        {/* Totales tab */}
+        {tab === 'totales' && (
+          <TotalsView
+            config={config!}
+            data={totalesData}
+            from={totalesFrom}
+            to={totalesTo}
+            setData={setTotalesData}
+            setFrom={setTotalesFrom}
+            setTo={setTotalesTo}
+          />
+        )}
+
+        {/* Semana tab */}
+        {tab === 'semana' && (
+          <>
+            <form onSubmit={handleSearch} className="mb-6">
+              <div className="flex gap-2">
+                <div className="relative flex-1 max-w-sm">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    value={weekInput}
+                    onChange={(e) => setWeekInput(e.target.value)}
+                    placeholder="Semana, ej: 6/4 - 10/4"
+                    className="pl-9"
+                  />
+                </div>
+                <Button type="submit" disabled={loading || !weekInput.trim()}>
+                  <Search className="w-4 h-4 mr-2" />
+                  Buscar
+                </Button>
+              </div>
+              <p className="text-xs text-gray-400 mt-1.5">
+                Escribí el nombre exacto de la tarea semanal como aparece en Azure DevOps
+              </p>
+            </form>
+
+            {error && (
+              <div className="rounded-md bg-red-50 border border-red-200 p-4 mb-4 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+
+            {loading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}
+              </div>
+            ) : !activeWeek ? (
+              <div className="text-center py-16 text-gray-400">
+                <Calendar className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                <p className="text-base">Ingresá la semana para ver tus tareas</p>
+              </div>
+            ) : items.length === 0 ? (
+              <div className="text-center py-16 text-gray-400">
+                <p className="text-base">
+                  No se encontraron tareas para{' '}
+                  <strong className="text-gray-600">&ldquo;{activeWeek}&rdquo;</strong>
+                </p>
+                <p className="text-sm mt-1">
+                  Verificá que el nombre coincida exactamente con la tarea en Azure DevOps
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Weekly progress bar */}
+                <WeekProgress totalHours={weeklyHours} />
+
+                {/* Name filter */}
+                <div className="relative mb-3">
+                  <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    value={nameFilter}
+                    onChange={(e) => setNameFilter(e.target.value)}
+                    placeholder="Filtrar por nombre..."
+                    className="pl-9 bg-white"
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  {items
+                    .filter((item) => {
+                      if (!nameFilter.trim()) return true
+                      const q = nameFilter.toLowerCase()
+                      return (
+                        item.title.toLowerCase().includes(q) ||
+                        (item.weekTasks || []).some((wt) =>
+                          (wt.tasks || []).some((t) => t.title.toLowerCase().includes(q))
+                        )
+                      )
+                    })
+                    .map((item) => (
+                      <BacklogItemCard
+                        key={item.id}
+                        item={item}
+                        config={config!}
+                        onHoursChange={(delta) => setWeeklyHours((h) => h + delta)}
+                      />
+                    ))}
+                </div>
+              </>
+            )}
+          </>
+        )}
+      </main>
+    </div>
+  )
+}
