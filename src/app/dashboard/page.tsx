@@ -214,9 +214,14 @@ export default function DashboardPage() {
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <span className="text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg py-1.5 px-4">
+              <button
+                type="button"
+                onClick={() => { const l = getWeekLabel(navDate); setWeekInput(l); setActiveWeek(l); loadItems(l) }}
+                disabled={loading}
+                className="text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg py-1.5 px-4 hover:border-gray-300 hover:text-gray-900 disabled:opacity-40 transition-colors"
+              >
                 {getWeekLabel(navDate)}
-              </span>
+              </button>
               <button
                 type="button"
                 onClick={() => handleNavWeek(1)}
