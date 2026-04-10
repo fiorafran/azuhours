@@ -38,7 +38,14 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (loaded && !config) router.push('/')
-  }, [loaded, config, router])
+    if (loaded && config) {
+      const label = getWeekLabel(new Date())
+      setWeekInput(label)
+      setActiveWeek(label)
+      loadItems(label)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded])
 
   async function loadItems(week: string) {
     if (!config || !week.trim()) return
