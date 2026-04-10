@@ -8,7 +8,7 @@ import { BacklogItemCard } from '@/components/backlog-item-card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
-import { LogOut, RefreshCw, User, Search, Calendar, BarChart2, Filter, ClockArrowUp } from 'lucide-react'
+import { LogOut, RefreshCw, User, Search, Calendar, BarChart2, Filter, ClockArrowUp, ChevronLeft, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { TotalsView, ClienteGroup } from '@/components/totals-view'
 import { WeekProgress } from '@/components/week-progress'
@@ -27,6 +27,7 @@ export default function DashboardPage() {
   const [activeWeek, setActiveWeek] = useState('')
   const [weeklyHours, setWeeklyHours] = useState(0)
   const [nameFilter, setNameFilter] = useState('')
+  const [navDate, setNavDate] = useState<Date>(() => new Date())
 
   // Totales tab state — lifted here so it persists across tab switches
   const [totalesData, setTotalesData] = useState<ClienteGroup[]>([])
@@ -84,6 +85,27 @@ export default function DashboardPage() {
     if (!weekInput.trim()) return
     setActiveWeek(weekInput.trim())
     loadItems(weekInput.trim())
+  }
+
+  function getWeekLabel(date: Date): string {
+    const day = date.getDay()
+    const diff = day === 0 ? -6 : 1 - day
+    const monday = new Date(date)
+    monday.setDate(date.getDate() + diff)
+    const friday = new Date(monday)
+    friday.setDate(monday.getDate() + 4)
+    const fmt = (d: Date) => `${d.getDate()}/${d.getMonth() + 1}`
+    return `${fmt(monday)} - ${fmt(friday)}`
+  }
+
+  function handleNavWeek(direction: -1 | 1) {
+    const next = new Date(navDate)
+    next.setDate(navDate.getDate() + direction * 7)
+    setNavDate(next)
+    const label = getWeekLabel(next)
+    setWeekInput(label)
+    setActiveWeek(label)
+    loadItems(label)
   }
 
   function handleLogout() {
@@ -182,6 +204,29 @@ export default function DashboardPage() {
         {/* Semana tab */}
         {tab === 'semana' && (
           <>
+            {/* Week date navigator */}
+            <div className="flex items-center gap-1.5 mb-3 w-fit">
+              <button
+                type="button"
+                onClick={() => handleNavWeek(-1)}
+                disabled={loading}
+                className="p-1.5 rounded-lg border border-gray-200 bg-white text-gray-500 hover:text-gray-800 hover:border-gray-300 disabled:opacity-40 transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg py-1.5 px-4">
+                {getWeekLabel(navDate)}
+              </span>
+              <button
+                type="button"
+                onClick={() => handleNavWeek(1)}
+                disabled={loading}
+                className="p-1.5 rounded-lg border border-gray-200 bg-white text-gray-500 hover:text-gray-800 hover:border-gray-300 disabled:opacity-40 transition-colors"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+
             <form onSubmit={handleSearch} className="mb-6">
               <div className="flex gap-2">
                 <div className="relative flex-1 max-w-sm">

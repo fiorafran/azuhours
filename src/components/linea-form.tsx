@@ -123,8 +123,8 @@ export function LineaForm({ open, onClose, onSave, defaultCliente, editLinea }: 
               <Input
                 id="horas"
                 type="number"
-                step="0.5"
-                min="0.5"
+                step="any"
+                min="0.01"
                 value={horas}
                 onChange={(e) => setHoras(e.target.value)}
                 placeholder="ej: 3"
