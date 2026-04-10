@@ -12,7 +12,7 @@ import { LogOut, RefreshCw, User, Search, Calendar, BarChart2, Filter, ClockArro
 import { toast } from 'sonner'
 import { TotalsView, ClienteGroup } from '@/components/totals-view'
 import { WeekProgress } from '@/components/week-progress'
-import { ProyectosView } from '@/components/proyectos-view'
+import { ProyectosView, ProyectoRow } from '@/components/proyectos-view'
 
 type Tab = 'semana' | 'totales' | 'proyectos'
 
@@ -34,6 +34,10 @@ export default function DashboardPage() {
   const [totalesData, setTotalesData] = useState<ClienteGroup[]>([])
   const [totalesFrom, setTotalesFrom] = useState('')
   const [totalesTo, setTotalesTo] = useState('')
+
+  // Proyectos tab state — lifted here so it persists across tab switches
+  const [proyectosData, setProyectosData] = useState<ProyectoRow[]>([])
+  const [showIncompleteProyectos, setShowIncompleteProyectos] = useState(false)
 
   const [tab, setTab] = useState<Tab>('semana')
 
@@ -207,7 +211,13 @@ export default function DashboardPage() {
 
         {/* Proyectos tab */}
         {tab === 'proyectos' && (
-          <ProyectosView config={config!} />
+          <ProyectosView
+            config={config!}
+            data={proyectosData}
+            setData={setProyectosData}
+            showIncomplete={showIncompleteProyectos}
+            setShowIncomplete={setShowIncompleteProyectos}
+          />
         )}
 
         {/* Totales tab */}

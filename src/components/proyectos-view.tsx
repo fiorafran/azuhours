@@ -7,17 +7,13 @@ import { CircularProgress } from './circular-progress'
 import { AuthConfig } from '@/lib/types'
 import { RefreshCw, Pencil, Check, X, Eye, EyeOff } from 'lucide-react'
 
-interface ProyectoItem {
+export interface ProyectoRow {
   id: number
   title: string
   state: string
-  tags: string
-  horasComercial: number    // from Azure DevOps field
-  horasConsumidas: number   // computed from lineas
-}
-
-interface ProyectoRow extends ProyectoItem {
-  horasContratadas: number  // horasComercial ?? localStorage override
+  horasComercial: number
+  horasConsumidas: number
+  horasContratadas: number
 }
 
 const STORAGE_KEY = 'azuhours_contracted_hours'
@@ -30,25 +26,33 @@ function saveOverrides(map: Record<number, number>) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(map))
 }
 
-interface ProyectosViewProps {
-  config: AuthConfig
+function round2(n: number) {
+  return Math.round(n * 100) / 100
 }
 
-export function ProyectosView({ config }: ProyectosViewProps) {
-  const [rows, setRows] = useState<ProyectoRow[]>([])
+interface ProyectosViewProps {
+  config: AuthConfig
+  data: ProyectoRow[]
+  setData: (rows: ProyectoRow[]) => void
+  showIncomplete: boolean
+  setShowIncomplete: (v: boolean) => void
+}
+
+export function ProyectosView({ config, data, setData, showIncomplete, setShowIncomplete }: ProyectosViewProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editVal, setEditVal] = useState('')
-  const [showIncomplete, setShowIncomplete] = useState(false)
   const editInputRef = useRef<HTMLInputElement>(null)
 
+  // Only fetch on first mount if no data yet
   const didFetch = useRef(false)
   useEffect(() => {
-    if (didFetch.current) return
+    if (didFetch.current || data?.length > 0) return
     didFetch.current = true
     fetchData()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (editingId !== null) setTimeout(() => editInputRef.current?.select(), 0)
   }, [editingId])
@@ -64,16 +68,15 @@ export function ProyectosView({ config }: ProyectosViewProps) {
           'x-azure-project': config.project,
         },
       })
-      const data = await res.json()
-      if (!res.ok) { setError(data.error || 'Error al cargar'); return }
+      const json = await res.json()
+      if (!res.ok) { setError(json.error || 'Error al cargar'); return }
 
       const overrides = loadOverrides()
-      const mapped: ProyectoRow[] = (data as ProyectoItem[]).map((p) => ({
+      const mapped: ProyectoRow[] = json.map((p: Omit<ProyectoRow, 'horasContratadas'>) => ({
         ...p,
-        // localStorage override > Azure DevOps field > 0
         horasContratadas: overrides[p.id] ?? p.horasComercial,
       }))
-      setRows(mapped)
+      setData(mapped)
     } catch {
       setError('Error de conexión')
     } finally {
@@ -93,18 +96,19 @@ export function ProyectosView({ config }: ProyectosViewProps) {
     if (value > 0) overrides[id] = value
     else delete overrides[id]
     saveOverrides(overrides)
-    setRows((prev) =>
-      prev.map((r) => r.id === id ? { ...r, horasContratadas: value > 0 ? value : r.horasComercial } : r)
-    )
+    setData(data?.map((r) => r.id === id
+      ? { ...r, horasContratadas: value > 0 ? value : r.horasComercial }
+      : r
+    ))
     setEditingId(null)
   }
 
-  const completeRows = rows.filter((r) => r.horasConsumidas > 0 && r.horasContratadas > 0)
-  const incompleteRows = rows.filter((r) => r.horasConsumidas === 0 || r.horasContratadas === 0)
-  const visibleRows = showIncomplete ? rows : completeRows
+  const completeRows = data?.filter((r) => r.horasConsumidas > 0 && r.horasContratadas > 0) || []
+  const incompleteRows = data?.filter((r) => r.horasConsumidas === 0 || r.horasContratadas === 0) || []
+  const visibleRows = showIncomplete ? data : completeRows
 
-  const totalConsumidas = completeRows.reduce((s, r) => s + r.horasConsumidas, 0)
-  const totalContratadas = completeRows.reduce((s, r) => s + r.horasContratadas, 0)
+  const totalConsumidas = round2(completeRows.reduce((s, r) => s + r.horasConsumidas, 0))
+  const totalContratadas = round2(completeRows.reduce((s, r) => s + r.horasContratadas, 0))
   const totalPct = totalContratadas > 0 ? (totalConsumidas / totalContratadas) * 100 : 0
 
   return (
@@ -124,7 +128,7 @@ export function ProyectosView({ config }: ProyectosViewProps) {
               <p className="text-sm font-semibold text-gray-800">
                 {totalConsumidas}h <span className="font-normal text-gray-400">/ {totalContratadas}h contratadas</span>
               </p>
-              <p className="text-xs text-gray-400">{Math.round(totalContratadas - totalConsumidas)}h restantes</p>
+              <p className="text-xs text-gray-400">{round2(totalContratadas - totalConsumidas)}h restantes</p>
             </div>
           </div>
         ) : <div />}
@@ -133,7 +137,7 @@ export function ProyectosView({ config }: ProyectosViewProps) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setShowIncomplete((v) => !v)}
+              onClick={() => setShowIncomplete(!showIncomplete)}
               className={`gap-1.5 text-sm ${showIncomplete ? 'text-blue-600' : 'text-gray-400'}`}
               title={showIncomplete ? 'Ocultar incompletos' : `Ver todos (${incompleteRows.length} sin datos)`}
             >
@@ -155,7 +159,7 @@ export function ProyectosView({ config }: ProyectosViewProps) {
         <div className="space-y-3">
           {[1, 2, 3, 4].map((i) => <div key={i} className="h-24 bg-gray-100 rounded-xl animate-pulse" />)}
         </div>
-      ) : rows.length === 0 ? (
+      ) : data?.length === 0 && !loading ? (
         <div className="text-center py-16 text-gray-400">
           <p>No hay proyectos activos</p>
         </div>
@@ -163,14 +167,13 @@ export function ProyectosView({ config }: ProyectosViewProps) {
         <div className="space-y-3">
           {visibleRows.map((row) => {
             const pct = row.horasContratadas > 0 ? (row.horasConsumidas / row.horasContratadas) * 100 : 0
-            const restantes = row.horasContratadas > 0 ? row.horasContratadas - row.horasConsumidas : null
+            const restantes = row.horasContratadas > 0 ? round2(row.horasContratadas - row.horasConsumidas) : null
             const isEditing = editingId === row.id
             const barColor = pct >= 100 ? 'bg-red-400' : pct >= 80 ? 'bg-yellow-400' : 'bg-green-500'
 
             return (
               <div key={row.id} className="bg-white border border-gray-200 rounded-xl px-4 py-3 shadow-sm">
                 <div className="flex items-center gap-4">
-                  {/* Circular chart */}
                   <div className="relative shrink-0">
                     <CircularProgress pct={pct} size={60} stroke={6} />
                     <span className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-gray-700">
@@ -178,7 +181,6 @@ export function ProyectosView({ config }: ProyectosViewProps) {
                     </span>
                   </div>
 
-                  {/* Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <p className="font-semibold text-gray-900 truncate">{row.title}</p>
@@ -190,7 +192,6 @@ export function ProyectosView({ config }: ProyectosViewProps) {
                         Consumidas: <span className="font-medium text-gray-800">{row.horasConsumidas}h</span>
                       </span>
 
-                      {/* Horas contratadas — editable override */}
                       <span className="text-sm text-gray-500 flex items-center gap-1">
                         Propuesta:&nbsp;
                         {isEditing ? (
@@ -237,7 +238,6 @@ export function ProyectosView({ config }: ProyectosViewProps) {
                       )}
                     </div>
 
-                    {/* Progress bar */}
                     {row.horasContratadas > 0 && (
                       <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                         <div

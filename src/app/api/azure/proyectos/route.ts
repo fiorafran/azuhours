@@ -30,7 +30,6 @@ function makeConfig(req: NextRequest): AuthConfig {
   }
 }
 
-// Concurrent batching — skips items that fail (404/403)
 async function batchMap<T, R>(arr: T[], fn: (item: T) => Promise<R>, size = 10): Promise<R[]> {
   const results: R[] = []
   for (let i = 0; i < arr.length; i += size) {
@@ -42,21 +41,9 @@ async function batchMap<T, R>(arr: T[], fn: (item: T) => Promise<R>, size = 10):
   return results
 }
 
-// Fetch each item individually so a single 404 doesn't fail the whole batch
 async function fetchIndividual(config: AuthConfig, ids: number[], fields: string[]) {
   const items = await batchMap(ids, (id) => getWorkItemsBatch(config, [id], fields).then((r) => r[0]))
   return items.filter(Boolean)
-}
-
-// getWorkItemsBatch with internal 200-item chunking
-async function batchFetch(config: AuthConfig, ids: number[], fields?: string[]) {
-  if (ids.length === 0) return []
-  const results: Record<string, unknown>[] = []
-  for (let i = 0; i < ids.length; i += 200) {
-    const items = await getWorkItemsBatch(config, ids.slice(i, i + 200), fields)
-    results.push(...items)
-  }
-  return results
 }
 
 export async function GET(req: NextRequest) {
@@ -64,15 +51,16 @@ export async function GET(req: NextRequest) {
   if (!config.pat) return NextResponse.json({ error: 'Missing PAT' }, { status: 401 })
 
   try {
-    // 1. Discover fields in parallel
+    // 1. Discover fields
     const [backlogFields, lineaFieldMap] = await Promise.all([
       getBacklogFieldMap(config),
       getLineaFieldMap(config),
     ])
     const horasComercialRef = resolveField(backlogFields, 'horas propuesta', 'horaspropuesta', 'horas propuesta comercial')
     const horasRef = resolveField(lineaFieldMap, 'horas linea proyecto', 'horas', 'horaslineaproyecto')
+    const clienteRef = resolveField(lineaFieldMap, 'cliente')
 
-    // 2. Get all week tasks (Tasks) assigned to @Me — same source as "Por semana" view
+    // 2. Get week tasks assigned to @Me → find their parent backlog items
     const weekTaskResult = await azureRequest<{ workItems: { id: number }[] }>(
       config,
       `${projectPath(config)}/_apis/wit/wiql`,
@@ -87,7 +75,6 @@ export async function GET(req: NextRequest) {
     const weekTaskIds = (weekTaskResult.workItems || []).map((w) => w.id)
     if (weekTaskIds.length === 0) return NextResponse.json([])
 
-    // 3. Expand week tasks to get their parent backlog item IDs
     const weekTasksExpanded = await batchMap(weekTaskIds, (id) => getWorkItemWithChildren(config, id))
     const backlogIds = [...new Set(
       weekTasksExpanded
@@ -97,8 +84,7 @@ export async function GET(req: NextRequest) {
 
     if (backlogIds.length === 0) return NextResponse.json([])
 
-    // 4. Fetch backlog items individually (handles 404/403 per item gracefully)
-    //    Filter out those tagged "100%"
+    // 3. Fetch backlog items individually (handles 404/403), filter "100%" tag
     const backlogItems = (
       await fetchIndividual(config, backlogIds, [
         'System.Id', 'System.Title', 'System.State', 'System.Tags',
@@ -110,9 +96,9 @@ export async function GET(req: NextRequest) {
     })
 
     if (backlogItems.length === 0) return NextResponse.json([])
-    const validBacklogIds = new Set(backlogItems.map((i) => i['id'] as number))
 
-    // 5. Get all lineas assigned to @Me
+    // 4. Get consumed hours from totals (same source as Totales tab — groups by cliente field)
+    //    This is the reliable source: it's what Totales shows, grouped by linea.cliente
     const lineaResult = await azureRequest<{ workItems: { id: number }[] }>(
       config,
       `${projectPath(config)}/_apis/wit/wiql`,
@@ -125,66 +111,37 @@ export async function GET(req: NextRequest) {
     )
 
     const lineaIds = (lineaResult.workItems || []).map((w) => w.id)
-    const lineaHoursMap = new Map<number, number>()
+
+    // Accumulate hours by cliente name (same logic as totals endpoint)
+    const horasByCliente = new Map<string, number>()
 
     if (lineaIds.length > 0) {
-      // 6. Traverse linea → task → week task → backlog item
-      const lineasExpanded = await batchMap(lineaIds, (id) => getWorkItemWithChildren(config, id))
-      const lineaToTask = new Map<number, number>()
-      for (const l of lineasExpanded) {
-        const taskId = extractParentId(l.relations)
-        if (taskId !== null) lineaToTask.set(l.id, taskId)
-      }
-
-      const uniqueTaskIds = [...new Set(lineaToTask.values())]
-      const tasksExpanded = await batchMap(uniqueTaskIds, (id) => getWorkItemWithChildren(config, id))
-      const taskToWeekTask = new Map<number, number>()
-      for (const t of tasksExpanded) {
-        const wtId = extractParentId(t.relations)
-        if (wtId !== null) taskToWeekTask.set(t.id, wtId)
-      }
-
-      const uniqueWeekTaskIds = [...new Set(taskToWeekTask.values())]
-      const weekTasksForLineas = await batchMap(uniqueWeekTaskIds, (id) => getWorkItemWithChildren(config, id))
-      const weekTaskToBacklog = new Map<number, number>()
-      for (const wt of weekTasksForLineas) {
-        const backlogId = extractParentId(wt.relations)
-        if (backlogId !== null && validBacklogIds.has(backlogId)) {
-          weekTaskToBacklog.set(wt.id, backlogId)
-        }
-      }
-
-      const lineaToBacklog = new Map<number, number>()
-      for (const [lineaId, taskId] of lineaToTask) {
-        const wtId = taskToWeekTask.get(taskId)
-        if (wtId === undefined) continue
-        const backlogId = weekTaskToBacklog.get(wtId)
-        if (backlogId !== undefined) lineaToBacklog.set(lineaId, backlogId)
-      }
-
-      // 7. Fetch linea hours and accumulate per backlog item
-      const lineaDetails = await batchFetch(config, lineaIds, ['System.Id', horasRef])
-      for (const linea of lineaDetails) {
-        const lineaId = linea['id'] as number
-        const horas = ((linea.fields as Record<string, unknown>)[horasRef] as number) || 0
-        const backlogId = lineaToBacklog.get(lineaId)
-        if (backlogId !== undefined) {
-          lineaHoursMap.set(backlogId, (lineaHoursMap.get(backlogId) || 0) + horas)
+      const batchSize = 200
+      for (let i = 0; i < lineaIds.length; i += batchSize) {
+        const batch = lineaIds.slice(i, i + batchSize)
+        const details = await getWorkItemsBatch(config, batch, ['System.Id', horasRef, clienteRef])
+        for (const linea of details) {
+          const f = linea.fields as Record<string, unknown>
+          const cliente = ((f[clienteRef] as string) || '').trim().toLowerCase()
+          const horas = (f[horasRef] as number) || 0
+          if (cliente) horasByCliente.set(cliente, (horasByCliente.get(cliente) || 0) + horas)
         }
       }
     }
 
-    // 8. Build response
+    // 5. Match backlog item title to cliente name and build response
     const result = backlogItems
       .map((item) => {
         const f = item.fields as Record<string, unknown>
         const id = item['id'] as number
+        const title = f['System.Title'] as string
+        const horasConsumidas = horasByCliente.get(title.trim().toLowerCase()) || 0
         return {
           id,
-          title: f['System.Title'] as string,
+          title,
           state: f['System.State'] as string,
           horasComercial: (f[horasComercialRef] as number) || 0,
-          horasConsumidas: lineaHoursMap.get(id) || 0,
+          horasConsumidas,
         }
       })
       .sort((a, b) => b.horasConsumidas - a.horasConsumidas)

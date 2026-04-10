@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ChevronDown, ChevronRight, Clock, Search } from 'lucide-react'
@@ -38,25 +38,23 @@ function ClienteCard({ group }: { group: ClienteGroup }) {
   const [expanded, setExpanded] = useState(false)
 
   return (
-    <Card className="shadow-sm border-gray-200">
-      <CardHeader className="py-3 px-4">
-        <div
-          className="flex items-center gap-3 cursor-pointer"
-          onClick={() => setExpanded(!expanded)}
-        >
-          <button className="text-gray-400 shrink-0">
-            {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-          </button>
-          <span className="font-semibold text-gray-900 flex-1">{group.cliente}</span>
-          <div className="flex items-center gap-2">
-            <Badge className="bg-blue-100 text-blue-800 font-mono text-sm gap-1">
-              <Clock className="w-3 h-3" />
-              {group.totalHoras}h
-            </Badge>
-            <span className="text-xs text-gray-400">{group.lineas.length} líneas</span>
-          </div>
+    <Card className="shadow-sm border-gray-200 py-0 gap-0">
+      <div
+        className="flex items-center gap-3 py-3 px-4 cursor-pointer"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <span className="text-gray-400 shrink-0">
+          {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+        </span>
+        <span className="font-semibold text-gray-900 flex-1">{group.cliente}</span>
+        <div className="flex items-center gap-2">
+          <Badge className="bg-blue-100 text-blue-800 font-mono text-sm gap-1">
+            <Clock className="w-3 h-3" />
+            {group.totalHoras}h
+          </Badge>
+          <span className="text-xs text-gray-400">{group.lineas.length} líneas</span>
         </div>
-      </CardHeader>
+      </div>
 
       {expanded && (
         <CardContent className="pt-0 px-4 pb-3">
