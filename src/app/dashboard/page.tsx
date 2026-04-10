@@ -313,7 +313,23 @@ export default function DashboardPage() {
             ) : (
               <>
                 {/* Weekly progress bar */}
-                <WeekProgress totalHours={weeklyHours} />
+                <WeekProgress
+                  totalHours={weeklyHours}
+                  breakdown={items
+                    .map((item) => ({
+                      title: item.title,
+                      hours: Math.round(
+                        (item.weekTasks || []).reduce((s, wt) =>
+                          s + (wt.tasks || []).reduce((s2, t) =>
+                            s2 + ((t.lineas as { horasLineaProyecto?: number }[]) || [])
+                              .reduce((s3, l) => s3 + (l.horasLineaProyecto || 0), 0)
+                          , 0)
+                        , 0) * 100) / 100,
+                    }))
+                    .filter((p) => p.hours > 0)
+                    .sort((a, b) => b.hours - a.hours)
+                  }
+                />
 
                 {/* Name filter */}
                 <div className="relative mb-3">

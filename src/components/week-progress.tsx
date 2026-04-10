@@ -1,20 +1,28 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Clock, Pencil, RotateCcw } from 'lucide-react'
+import { Clock, Pencil, RotateCcw, ChevronDown } from 'lucide-react'
 
 const DEFAULT_GOAL = 40
 const STORAGE_KEY = 'azuhours_weekly_goal'
 
-interface WeekProgressProps {
-  totalHours: number
+interface ProjectBreakdown {
+  title: string
+  hours: number
 }
 
-export function WeekProgress({ totalHours }: WeekProgressProps) {
+interface WeekProgressProps {
+  totalHours: number
+  breakdown?: ProjectBreakdown[]
+}
+
+export function WeekProgress({ totalHours, breakdown = [] }: WeekProgressProps) {
   const [goal, setGoal] = useState(DEFAULT_GOAL)
   const [editing, setEditing] = useState(false)
   const [inputVal, setInputVal] = useState('')
+  const [expanded, setExpanded] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const breakdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY)
@@ -124,6 +132,52 @@ export function WeekProgress({ totalHours }: WeekProgressProps) {
         <span>{mid}h</span>
         <span>{goal}h</span>
       </div>
+
+      {breakdown.length > 0 && (
+        <div className="mt-2 border-t border-gray-100">
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            className="w-full flex items-center justify-between pt-2 pb-0.5 text-xs text-gray-400 hover:text-gray-600 transition-colors group"
+          >
+            <span className="font-medium">
+              {breakdown.length} proyecto{breakdown.length !== 1 ? 's' : ''} con horas
+            </span>
+            <ChevronDown
+              className={`w-3.5 h-3.5 transition-transform duration-300 ${expanded ? 'rotate-180' : ''}`}
+            />
+          </button>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateRows: expanded ? '1fr' : '0fr',
+              transition: 'grid-template-rows 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+            }}
+          >
+            <div ref={breakdownRef} className="overflow-hidden">
+              <div className="space-y-2 pt-2 pb-0.5">
+                {breakdown.map((p) => {
+                  const pPct = Math.min((p.hours / totalHours) * 100, 100)
+                  return (
+                    <div key={p.title} className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500 truncate flex-1 min-w-0">{p.title}</span>
+                      <div className="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden shrink-0">
+                        <div
+                          className="h-full rounded-full bg-blue-400 transition-all duration-500"
+                          style={{ width: expanded ? `${pPct}%` : '0%' }}
+                        />
+                      </div>
+                      <span className="text-xs font-mono font-medium text-gray-600 w-10 text-right shrink-0">
+                        {p.hours}h
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
