@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { parentId, horas, tipoHora, fecha, cliente } = body
+    const { parentId, horas, tipoHora, fecha, cliente, title } = body
     const parentIdNum = parseInt(parentId)
     if (!parentId || isNaN(parentIdNum) || parentIdNum <= 0) return NextResponse.json({ error: 'Missing or invalid parentId' }, { status: 400 })
 
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
     const clienteRef = resolveField(fieldMap, 'cliente')
 
     const linea = await createLinea(config, parentIdNum, {
-      title: String(horas),
+      title: title ? String(title) : String(horas),
       horas: Number(horas),
       tipoHora,
       fecha: toNoonUtc(fecha),
@@ -78,7 +78,7 @@ export async function PATCH(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { id, horas, tipoHora, fecha, cliente } = body
+    const { id, horas, tipoHora, fecha, cliente, title } = body
     const idNum = parseInt(id)
     if (!id || isNaN(idNum) || idNum <= 0) return NextResponse.json({ error: 'Missing or invalid id' }, { status: 400 })
 
@@ -89,7 +89,7 @@ export async function PATCH(req: NextRequest) {
     const clienteRef = resolveField(fieldMap, 'cliente')
 
     const linea = await updateLinea(config, idNum, {
-      title: horas !== undefined ? String(horas) : undefined,
+      title: title !== undefined ? String(title) : horas !== undefined ? String(horas) : undefined,
       horas: horas !== undefined ? Number(horas) : undefined,
       tipoHora,
       fecha: fecha ? toNoonUtc(fecha) : undefined,

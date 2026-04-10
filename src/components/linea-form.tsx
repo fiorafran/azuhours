@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Loader2 } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
 import { LineaItem } from '@/lib/types'
 
 interface LineaFormProps {
@@ -34,6 +35,7 @@ export interface LineaFormValues {
   tipoHora: string
   fecha: string
   cliente: string
+  title?: string
 }
 
 const TIPOS_HORA = ['Estandar', 'Extra', 'Feriado', 'Guardia']
@@ -43,6 +45,8 @@ export function LineaForm({ open, onClose, onSave, defaultCliente, editLinea }: 
   const [tipoHora, setTipoHora] = useState('Estandar')
   const [fecha, setFecha] = useState('')
   const [cliente, setCliente] = useState(defaultCliente || '')
+  const [customTitle, setCustomTitle] = useState(false)
+  const [title, setTitle] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -53,11 +57,18 @@ export function LineaForm({ open, onClose, onSave, defaultCliente, editLinea }: 
         setTipoHora(editLinea.tipoHora || 'Estandar')
         setFecha(editLinea.fechaLinea ? editLinea.fechaLinea.split('T')[0] : today())
         setCliente(editLinea.cliente || defaultCliente || '')
+        // If the existing title differs from the hours value, pre-enable custom title
+        const existingTitle = editLinea.title || ''
+        const isCustom = existingTitle !== String(editLinea.horasLineaProyecto || '')
+        setCustomTitle(isCustom)
+        setTitle(isCustom ? existingTitle : '')
       } else {
         setHoras('')
         setTipoHora('Estandar')
         setFecha(today())
         setCliente(defaultCliente || '')
+        setCustomTitle(false)
+        setTitle('')
       }
       setError('')
     }
@@ -82,7 +93,13 @@ export function LineaForm({ open, onClose, onSave, defaultCliente, editLinea }: 
     setError('')
     setLoading(true)
     try {
-      await onSave({ horas: horasNum, tipoHora, fecha, cliente })
+      await onSave({
+        horas: horasNum,
+        tipoHora,
+        fecha,
+        cliente,
+        title: customTitle && title.trim() ? title.trim() : undefined,
+      })
       onClose()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al guardar.')
@@ -155,9 +172,33 @@ export function LineaForm({ open, onClose, onSave, defaultCliente, editLinea }: 
             </div>
           </div>
 
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="customTitleSwitch" className="text-sm text-gray-600 cursor-pointer">
+                Título personalizado
+              </Label>
+              <Switch
+                id="customTitleSwitch"
+                checked={customTitle}
+                onCheckedChange={(v: boolean) => {
+                  setCustomTitle(v)
+                  if (!v) setTitle('')
+                }}
+              />
+            </div>
+            {customTitle && (
+              <Input
+                autoFocus
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Título de la línea"
+              />
+            )}
+          </div>
+
           {error && (
-            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2 max-h-24 overflow-y-auto break-words">
-              {error.length > 200 ? error.slice(0, 200) + '…' : error}
+            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2 max-h-28 overflow-y-auto break-all">
+              {error}
             </div>
           )}
 

@@ -44,6 +44,7 @@ export function TaskItemComponent({ task, config, defaultCliente, onHoursChange 
         tipoHora: values.tipoHora,
         fecha: values.fecha,
         cliente: values.cliente,
+        title: values.title,
       }),
     })
     const data = await res.json()
@@ -65,6 +66,7 @@ export function TaskItemComponent({ task, config, defaultCliente, onHoursChange 
         tipoHora: values.tipoHora,
         fecha: values.fecha,
         cliente: values.cliente,
+        title: values.title,
       }),
     })
     const data = await res.json()
