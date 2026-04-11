@@ -8,6 +8,7 @@ export interface UserProfile {
   id: string
   displayName: string
   emailAddress?: string
+  uniqueName?: string
 }
 
 export interface WorkItem {

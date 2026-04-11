@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ChevronDown, ChevronRight, Plus, Clock } from 'lucide-react'
+import { ChevronDown, ChevronRight, Plus, Clock, Trash2, Check, X } from 'lucide-react'
 import { TaskItem as TaskItemType, LineaItem } from '@/lib/types'
 import { LineaRow } from './linea-row'
 import { LineaForm, LineaFormValues } from './linea-form'
@@ -15,6 +15,44 @@ interface TaskItemProps {
   config: AuthConfig
   defaultCliente?: string
   onHoursChange?: (delta: number) => void
+  onDelete?: () => void
+}
+
+function DeleteConfirm({ onConfirm }: { onConfirm: (e: React.MouseEvent) => void }) {
+  const [confirming, setConfirming] = useState(false)
+  if (confirming) {
+    return (
+      <span
+        className="flex items-center gap-1.5 bg-red-50 border border-red-200 rounded-lg px-2 py-0.5 animate-in fade-in-0 zoom-in-95 duration-150"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <span className="text-xs text-red-600 font-medium whitespace-nowrap">¿Eliminar?</span>
+        <button
+          onClick={(e) => { onConfirm(e); setConfirming(false) }}
+          className="text-red-500 hover:text-red-700 transition-colors p-0.5 rounded hover:bg-red-100"
+          title="Confirmar"
+        >
+          <Check className="w-4 h-4" />
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); setConfirming(false) }}
+          className="text-gray-400 hover:text-gray-600 transition-colors p-0.5 rounded hover:bg-gray-100"
+          title="Cancelar"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </span>
+    )
+  }
+  return (
+    <button
+      onClick={(e) => { e.stopPropagation(); setConfirming(true) }}
+      className="text-gray-300 hover:text-red-500 transition-colors ml-1"
+      title="Eliminar tarea"
+    >
+      <Trash2 className="w-4 h-4" />
+    </button>
+  )
 }
 
 function makeHeaders(config: AuthConfig) {
@@ -26,7 +64,7 @@ function makeHeaders(config: AuthConfig) {
   }
 }
 
-export function TaskItemComponent({ task, config, defaultCliente, onHoursChange }: TaskItemProps) {
+export function TaskItemComponent({ task, config, defaultCliente, onHoursChange, onDelete }: TaskItemProps) {
   const [expanded, setExpanded] = useState(false)
   const [lineas, setLineas] = useState<LineaItem[]>((task.lineas as LineaItem[]) || [])
   const [showAddForm, setShowAddForm] = useState(false)
@@ -113,6 +151,7 @@ export function TaskItemComponent({ task, config, defaultCliente, onHoursChange 
               {task.estimatedHours}h estimadas
             </Badge>
           )}
+          {onDelete && <DeleteConfirm onConfirm={(e) => { e.stopPropagation(); onDelete() }} />}
         </div>
       </div>
 

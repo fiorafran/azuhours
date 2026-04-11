@@ -8,13 +8,14 @@ import { BacklogItemCard } from '@/components/backlog-item-card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
-import { LogOut, RefreshCw, User, Search, Calendar, BarChart2, Filter, ClockArrowUp, ChevronLeft, ChevronRight, Briefcase } from 'lucide-react'
+import { LogOut, RefreshCw, User, Search, Calendar, BarChart2, Filter, ClockArrowUp, ChevronLeft, ChevronRight, Briefcase, Layers } from 'lucide-react'
 import { toast } from 'sonner'
 import { TotalsView, ClienteGroup } from '@/components/totals-view'
 import { WeekProgress } from '@/components/week-progress'
 import { ProyectosView, ProyectoRow } from '@/components/proyectos-view'
+import { TicketsView, TicketItem } from '@/components/tickets-view'
 
-type Tab = 'semana' | 'totales' | 'proyectos'
+type Tab = 'semana' | 'tickets' | 'totales' | 'proyectos'
 
 export default function DashboardPage() {
   const { config, user, loaded, logout } = useAuth()
@@ -38,6 +39,9 @@ export default function DashboardPage() {
   // Proyectos tab state — lifted here so it persists across tab switches
   const [proyectosData, setProyectosData] = useState<ProyectoRow[]>([])
   const [showIncompleteProyectos, setShowIncompleteProyectos] = useState(false)
+
+  // Tickets tab state — lifted here so it persists across tab switches
+  const [ticketsItems, setTicketsItems] = useState<TicketItem[]>([])
 
   const [tab, setTab] = useState<Tab>('semana')
 
@@ -173,7 +177,7 @@ export default function DashboardPage() {
       <main className="max-w-4xl mx-auto px-4 py-6">
         <div className="mb-6">
           <h1 className="text-xl font-bold text-gray-900">
-            {tab === 'semana' ? 'Mis tareas' : tab === 'totales' ? 'Horas por proyecto' : 'Proyectos'}
+            {tab === 'semana' ? 'Mis tareas' : tab === 'tickets' ? 'Mis tickets' : tab === 'totales' ? 'Horas por proyecto' : 'Proyectos'}
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">{config?.org} / {config?.project}</p>
         </div>
@@ -188,6 +192,15 @@ export default function DashboardPage() {
           >
             <Calendar className="w-4 h-4" />
             Por semana
+          </button>
+          <button
+            onClick={() => setTab('tickets')}
+            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              tab === 'tickets' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+            Tickets
           </button>
           <button
             onClick={() => setTab('totales')}
@@ -208,6 +221,15 @@ export default function DashboardPage() {
             Proyectos (beta)
           </button>
         </div>
+
+        {/* Tickets tab */}
+        {tab === 'tickets' && (
+          <TicketsView
+            config={config!}
+            items={ticketsItems}
+            setItems={setTicketsItems}
+          />
+        )}
 
         {/* Proyectos tab */}
         {tab === 'proyectos' && (

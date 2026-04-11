@@ -43,11 +43,13 @@ export function projectPath(config: AuthConfig) {
 
 export async function getCurrentUser(config: AuthConfig) {
   const data = await azureRequest<{
-    authenticatedUser: { subjectDescriptor: string; providerDisplayName: string; id: string }
+    authenticatedUser: Record<string, unknown>
   }>(config, `/_apis/connectionData`, {}, VERSION_PREVIEW)
+  const auth = data.authenticatedUser
   return {
-    id: data.authenticatedUser.id,
-    displayName: data.authenticatedUser.providerDisplayName,
+    id: auth['id'] as string,
+    displayName: (auth['providerDisplayName'] || auth['displayName']) as string,
+    uniqueName: auth['uniqueName'] as string | undefined,
   }
 }
 
@@ -208,6 +210,44 @@ export async function updateLinea(
     `${projectPath(config)}/_apis/wit/workitems/${lineaId}`,
     {
       method: 'PATCH',
+      headers: { 'Content-Type': 'application/json-patch+json' },
+      body: JSON.stringify(ops),
+    }
+  )
+}
+
+export async function createTask(
+  config: AuthConfig,
+  parentId: number,
+  title: string,
+  assignedTo?: string
+) {
+  const org = encodeURIComponent(config.org.trim())
+  const proj = encodeURIComponent(config.project.trim())
+
+  const ops: { op: string; path: string; value: unknown }[] = [
+    { op: 'add', path: '/fields/System.Title', value: title },
+  ]
+
+  if (assignedTo) {
+    ops.push({ op: 'add', path: '/fields/System.AssignedTo', value: assignedTo })
+  }
+
+  ops.push({
+    op: 'add',
+    path: '/relations/-',
+    value: {
+      rel: 'System.LinkTypes.Hierarchy-Reverse',
+      url: `https://dev.azure.com/${org}/${proj}/_apis/wit/workitems/${parentId}`,
+      attributes: { comment: '' },
+    },
+  })
+
+  return azureRequest<{ id: number; fields: Record<string, unknown> }>(
+    config,
+    `${projectPath(config)}/_apis/wit/workitems/$Task`,
+    {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json-patch+json' },
       body: JSON.stringify(ops),
     }

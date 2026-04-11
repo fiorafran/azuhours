@@ -64,6 +64,7 @@ export function BacklogItemCard({ item, config, onHoursChange }: BacklogItemCard
                   config={config}
                   defaultCliente={item.clienteName || item.title}
                   onHoursChange={onHoursChange}
+                  canDeleteTasks
                 />
               ))
             )}
