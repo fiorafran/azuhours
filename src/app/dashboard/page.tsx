@@ -13,7 +13,7 @@ import { toast } from 'sonner'
 import { TotalsView, ClienteGroup } from '@/components/totals-view'
 import { WeekProgress } from '@/components/week-progress'
 import { ProyectosView, ProyectoRow } from '@/components/proyectos-view'
-import { TicketsView, TicketItem } from '@/components/tickets-view'
+import { TicketsView, TicketItem, TicketTreesMap } from '@/components/tickets-view'
 
 type Tab = 'semana' | 'tickets' | 'totales' | 'proyectos'
 
@@ -42,6 +42,7 @@ export default function DashboardPage() {
 
   // Tickets tab state — lifted here so it persists across tab switches
   const [ticketsItems, setTicketsItems] = useState<TicketItem[]>([])
+  const [ticketsTreesMap, setTicketsTreesMap] = useState<TicketTreesMap>({})
 
   const [tab, setTab] = useState<Tab>('semana')
 
@@ -228,6 +229,8 @@ export default function DashboardPage() {
             config={config!}
             items={ticketsItems}
             setItems={setTicketsItems}
+            treesMap={ticketsTreesMap}
+            setTreesMap={setTicketsTreesMap}
           />
         )}
 

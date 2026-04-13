@@ -20,10 +20,14 @@ export interface TicketItem {
   boardColumn?: string | null
 }
 
+export type TicketTreesMap = Record<number, WeekTaskType[]>
+
 interface TicketsViewProps {
   config: AuthConfig
   items: TicketItem[]
   setItems: React.Dispatch<React.SetStateAction<TicketItem[]>>
+  treesMap: TicketTreesMap
+  setTreesMap: React.Dispatch<React.SetStateAction<TicketTreesMap>>
 }
 
 function getWeekLabel(date: Date): string {
@@ -461,12 +465,11 @@ function TicketCard({ item, config, weekFilter, tree, onLoad, onUpdate }: Ticket
 }
 
 // ---- TicketsView ----
-export function TicketsView({ config, items, setItems }: TicketsViewProps) {
+export function TicketsView({ config, items, setItems, treesMap, setTreesMap }: TicketsViewProps) {
   const [loading, setLoading] = useState(false)
   const [weekFilter, setWeekFilter] = useState('')
   const [nameFilter, setNameFilter] = useState('')
   const [hiddenStates, setHiddenStates] = useState<Set<string>>(new Set())
-  const [treesMap, setTreesMap] = useState<Record<number, WeekTaskType[]>>({})
   const preloadingRef = useRef(false)
 
   useEffect(() => {
@@ -476,7 +479,9 @@ export function TicketsView({ config, items, setItems }: TicketsViewProps) {
 
   // Background preload trees as soon as we have the items list
   useEffect(() => {
-    if (items.length === 0 || preloadingRef.current) return
+    // Si ya tenemos todos los trees no hay nada que precargar
+    const allLoaded = items.length > 0 && items.every((i) => treesMap[i.id] !== undefined)
+    if (items.length === 0 || preloadingRef.current || allLoaded) return
     preloadingRef.current = true
 
     async function preload() {
