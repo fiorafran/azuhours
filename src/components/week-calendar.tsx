@@ -8,6 +8,7 @@ import { CalendarDays, ChevronDown, ChevronRight } from 'lucide-react'
 interface WeekCalendarProps {
   items: BacklogItem[]
   navDate: Date
+  className?: string
 }
 
 interface CalendarTask {
@@ -63,7 +64,7 @@ function parseLocalDate(iso: string): Date {
   return new Date(iso)
 }
 
-export function WeekCalendar({ items, navDate }: WeekCalendarProps) {
+export function WeekCalendar({ items, navDate, className = '' }: WeekCalendarProps) {
   const [open, setOpen] = useState(true)
   const { days, projectColorMap } = useMemo(() => {
     const monday = getMondayOf(navDate)
@@ -113,7 +114,7 @@ export function WeekCalendar({ items, navDate }: WeekCalendarProps) {
   }, [items, navDate])
 
   return (
-    <div className="mb-6">
+    <div className={`bg-white border border-gray-200 rounded-xl px-4 py-3 shadow-sm ${className}`}>
       <button
         onClick={() => setOpen((o) => !o)}
         className="flex items-center gap-2 mb-3 w-full text-left group"

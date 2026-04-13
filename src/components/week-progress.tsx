@@ -14,9 +14,10 @@ interface ProjectBreakdown {
 interface WeekProgressProps {
   totalHours: number
   breakdown?: ProjectBreakdown[]
+  className?: string
 }
 
-export function WeekProgress({ totalHours, breakdown = [] }: WeekProgressProps) {
+export function WeekProgress({ totalHours, breakdown = [], className = '' }: WeekProgressProps) {
   const [goal, setGoal] = useState(DEFAULT_GOAL)
   const [editing, setEditing] = useState(false)
   const [inputVal, setInputVal] = useState('')
@@ -64,15 +65,15 @@ export function WeekProgress({ totalHours, breakdown = [] }: WeekProgressProps) 
   const mid = Math.round(goal / 2)
 
   return (
-    <div className="mb-5 bg-white border border-gray-200 rounded-xl px-4 py-3 shadow-sm">
+    <div className={`bg-white border border-gray-200 rounded-xl px-4 py-3 shadow-sm ${className}`}>
       <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-1.5 text-sm text-gray-600">
-          <Clock className="w-4 h-4" />
-          <span>Progreso semanal</span>
+        <div className="flex items-center gap-1 text-gray-600" style={{ fontSize: 13 }}>
+          <Clock className="w-3.5 h-3.5 shrink-0" />
+          <span className="whitespace-nowrap">Progreso semanal</span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className={`text-sm font-semibold font-mono ${textColor}`}>
+        <div className="flex items-center gap-1">
+          <span className={`font-semibold font-mono ${textColor}`} style={{ fontSize: 13 }}>
             {totalHours}h /&nbsp;
           </span>
 
@@ -91,7 +92,7 @@ export function WeekProgress({ totalHours, breakdown = [] }: WeekProgressProps) 
                 onBlur={commitEdit}
                 className="w-14 text-sm font-semibold font-mono text-center border border-blue-400 rounded px-1 py-0 outline-none focus:ring-1 focus:ring-blue-400"
               />
-              <span className={`text-sm font-semibold font-mono ${textColor}`}>h</span>
+              <span className={`font-semibold font-mono ${textColor}`} style={{ fontSize: 13 }}>h</span>
               {goal !== DEFAULT_GOAL && (
                 <button
                   onMouseDown={(e) => { e.preventDefault(); resetGoal() }}
@@ -105,7 +106,8 @@ export function WeekProgress({ totalHours, breakdown = [] }: WeekProgressProps) 
           ) : (
             <button
               onClick={() => setEditing(true)}
-              className={`flex items-center gap-1 text-sm font-semibold font-mono ${textColor} hover:opacity-70 group`}
+              className={`flex items-center gap-1 font-semibold font-mono ${textColor} hover:opacity-70 group`}
+              style={{ fontSize: 13 }}
               title="Cambiar meta semanal"
             >
               {goal}h

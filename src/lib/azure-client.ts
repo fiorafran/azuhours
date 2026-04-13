@@ -70,7 +70,7 @@ export async function getWorkItemsByWeek(config: AuthConfig, weekTitle: string):
   // Escape single quotes for WIQL
   const safe = weekTitle.replace(/'/g, "''")
   const wiql = {
-    query: `SELECT [System.Id] FROM WorkItems WHERE [System.AssignedTo] = @Me AND [System.WorkItemType] = 'Task' AND [System.Title] = '${safe}' ORDER BY [System.ChangedDate] DESC`,
+    query: `SELECT [System.Id] FROM WorkItems WHERE [System.WorkItemType] = 'Task' AND [System.Title] = '${safe}' ORDER BY [System.ChangedDate] DESC`,
   }
 
   const result = await azureRequest<{ workItems: { id: number }[] }>(

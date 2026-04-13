@@ -9,6 +9,7 @@ import {
 } from '@/lib/azure-client'
 import { getLineaFieldMap, resolveField } from '@/lib/field-cache'
 import { AuthConfig } from '@/lib/types'
+import { checkRequest } from '@/lib/rate-limit'
 
 const backlogFieldCache = new Map<string, Record<string, string>>()
 
@@ -47,8 +48,9 @@ async function fetchIndividual(config: AuthConfig, ids: number[], fields: string
 }
 
 export async function GET(req: NextRequest) {
+  const err = checkRequest(req, 'heavy')
+  if (err) return err
   const config = makeConfig(req)
-  if (!config.pat) return NextResponse.json({ error: 'Missing PAT' }, { status: 401 })
 
   try {
     // 1. Discover fields

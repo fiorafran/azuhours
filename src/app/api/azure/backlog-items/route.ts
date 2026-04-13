@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { azureRequest, projectPath, getWorkItemsBatch } from '@/lib/azure-client'
 import { AuthConfig } from '@/lib/types'
+import { checkRequest } from '@/lib/rate-limit'
 
 function makeConfig(req: NextRequest): AuthConfig {
   return {
@@ -13,8 +14,9 @@ function makeConfig(req: NextRequest): AuthConfig {
 // GET /api/azure/backlog-items
 // Returns all BacklogItems assigned to the authenticated user
 export async function GET(req: NextRequest) {
+  const rateLimitErr = checkRequest(req, 'heavy')
+  if (rateLimitErr) return rateLimitErr
   const config = makeConfig(req)
-  if (!config.pat) return NextResponse.json({ error: 'Missing PAT' }, { status: 401 })
 
   try {
     const wiql = {

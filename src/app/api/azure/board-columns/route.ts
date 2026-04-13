@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { azureRequest } from '@/lib/azure-client'
 import { AuthConfig } from '@/lib/types'
+import { checkRequest } from '@/lib/rate-limit'
 
 function makeConfig(req: NextRequest): AuthConfig {
   return {
@@ -24,8 +25,9 @@ export interface BoardColumnsResult {
 }
 
 export async function GET(req: NextRequest) {
+  const err = checkRequest(req)
+  if (err) return err
   const config = makeConfig(req)
-  if (!config.pat) return NextResponse.json({ error: 'Missing PAT' }, { status: 401 })
 
   try {
     const proj = encodeURIComponent(config.project.trim())

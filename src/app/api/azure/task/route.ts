@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createTask, getCurrentUser, deleteWorkItem } from '@/lib/azure-client'
 import { AuthConfig } from '@/lib/types'
+import { checkRequest } from '@/lib/rate-limit'
 
 function getConfig(req: NextRequest): AuthConfig {
   return {
@@ -12,8 +13,9 @@ function getConfig(req: NextRequest): AuthConfig {
 
 // POST /api/azure/task - Create a Task work item as child of a week task
 export async function POST(req: NextRequest) {
+  const err = checkRequest(req)
+  if (err) return err
   const config = getConfig(req)
-  if (!config.pat) return NextResponse.json({ error: 'Missing PAT' }, { status: 401 })
 
   try {
     const body = await req.json()
@@ -44,8 +46,9 @@ export async function POST(req: NextRequest) {
 
 // DELETE /api/azure/task?id=123
 export async function DELETE(req: NextRequest) {
+  const err = checkRequest(req)
+  if (err) return err
   const config = getConfig(req)
-  if (!config.pat) return NextResponse.json({ error: 'Missing PAT' }, { status: 401 })
 
   const id = req.nextUrl.searchParams.get('id')
   const deleteId = parseInt(id ?? '')

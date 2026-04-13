@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { azureRequest, projectPath } from '@/lib/azure-client'
 import { getLineaFieldMap, resolveField } from '@/lib/field-cache'
 import { AuthConfig } from '@/lib/types'
+import { checkRequest } from '@/lib/rate-limit'
 
 function getConfig(req: NextRequest): AuthConfig {
   return {
@@ -12,8 +13,9 @@ function getConfig(req: NextRequest): AuthConfig {
 }
 
 export async function GET(req: NextRequest) {
+  const err = checkRequest(req)
+  if (err) return err
   const config = getConfig(req)
-  if (!config.pat) return NextResponse.json({ error: 'Missing PAT' }, { status: 401 })
 
   const fromRaw = req.nextUrl.searchParams.get('from')
   const toRaw = req.nextUrl.searchParams.get('to')

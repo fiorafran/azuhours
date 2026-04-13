@@ -47,6 +47,7 @@ export default function DashboardPage() {
   const [ticketsTreesMap, setTicketsTreesMap] = useState<TicketTreesMap>({})
 
   const [tab, setTab] = useState<Tab>('semana')
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   useEffect(() => {
     if (loaded && !config) router.push('/')
@@ -144,31 +145,56 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="max-w-4xl mx-auto px-4 h-14 flex items-center gap-4">
+          <div className="flex items-center gap-3 shrink-0">
             <div className="bg-blue-600 text-white rounded-lg p-1.5">
               <ClockArrowUp className="w-5 h-5" />
             </div>
             <span className="font-bold text-gray-900">AzuHours</span>
           </div>
-          <div className="flex items-center gap-3">
+
+          {/* Tabs */}
+          <nav className="flex h-full flex-1 justify-center">
+            {([
+              { id: 'semana', label: 'Por semana', icon: <Calendar className="w-4 h-4 shrink-0" /> },
+              { id: 'tickets', label: 'Tickets', icon: <Layers className="w-4 h-4 shrink-0" /> },
+              { id: 'totales', label: 'Totales', icon: <BarChart2 className="w-4 h-4 shrink-0" /> },
+              { id: 'proyectos', label: 'Proyectos', icon: <Briefcase className="w-4 h-4 shrink-0" /> },
+            ] as { id: Tab; label: string; icon: JSX.Element }[]).map(({ id, label, icon }) => (
+              <button
+                key={id}
+                onClick={() => setTab(id)}
+                className={`flex items-center gap-1.5 px-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                  tab === id
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-800'
+                }`}
+              >
+                {icon}
+                <span className="hidden sm:inline">{label}</span>
+              </button>
+            ))}
+          </nav>
+
+          <div className="flex items-center gap-3 shrink-0">
             {user && (
               <div className="flex items-center gap-1.5 text-sm text-gray-600">
                 <User className="w-4 h-4" />
                 <span className="hidden sm:inline">{user.displayName}</span>
               </div>
             )}
-            {tab === 'semana' && activeWeek && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => loadItems(activeWeek)}
-                disabled={loading}
-                className="text-gray-500"
-              >
-                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              </Button>
-            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (tab === 'semana') loadItems(activeWeek)
+                else setRefreshTrigger((n) => n + 1)
+              }}
+              disabled={loading || (tab === 'semana' && !activeWeek)}
+              className="text-gray-500"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
             <Button
               variant="ghost"
               size="sm"
@@ -184,53 +210,6 @@ export default function DashboardPage() {
 
       {/* Content */}
       <main className="max-w-4xl mx-auto px-4 py-6">
-        <div className="mb-6">
-          <h1 className="text-xl font-bold text-gray-900">
-            {tab === 'semana' ? 'Mis tareas' : tab === 'tickets' ? 'Mis tickets' : tab === 'totales' ? 'Horas por proyecto' : 'Proyectos'}
-          </h1>
-          <p className="text-sm text-gray-500 mt-0.5">{config?.org} / {config?.project}</p>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex gap-1 mb-6 bg-gray-100 rounded-lg p-1 w-fit">
-          <button
-            onClick={() => setTab('semana')}
-            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              tab === 'semana' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Calendar className="w-4 h-4" />
-            Por semana
-          </button>
-          <button
-            onClick={() => setTab('tickets')}
-            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              tab === 'tickets' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Layers className="w-4 h-4" />
-            Tickets
-          </button>
-          <button
-            onClick={() => setTab('totales')}
-            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              tab === 'totales' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <BarChart2 className="w-4 h-4" />
-            Totales
-          </button>
-          <button
-            onClick={() => setTab('proyectos')}
-            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              tab === 'proyectos' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Briefcase className="w-4 h-4" />
-            Proyectos (beta)
-          </button>
-        </div>
-
         {/* Tickets tab */}
         {tab === 'tickets' && (
           <TicketsView
@@ -239,6 +218,7 @@ export default function DashboardPage() {
             setItems={setTicketsItems}
             treesMap={ticketsTreesMap}
             setTreesMap={setTicketsTreesMap}
+            refreshTrigger={refreshTrigger}
           />
         )}
 
@@ -250,6 +230,7 @@ export default function DashboardPage() {
             setData={setProyectosData}
             showIncomplete={showIncompleteProyectos}
             setShowIncomplete={setShowIncompleteProyectos}
+            refreshTrigger={refreshTrigger}
           />
         )}
 
@@ -263,6 +244,7 @@ export default function DashboardPage() {
             setData={setTotalesData}
             setFrom={setTotalesFrom}
             setTo={setTotalesTo}
+            refreshTrigger={refreshTrigger}
           />
         )}
 
@@ -270,36 +252,38 @@ export default function DashboardPage() {
         {tab === 'semana' && (
           <>
             {/* Week date navigator */}
-            <div className="flex items-center gap-1.5 mb-3 w-fit">
-              <button
-                type="button"
-                onClick={() => handleNavWeek(-1)}
-                disabled={loading}
-                className="p-1.5 rounded-lg border border-gray-200 bg-white text-gray-500 hover:text-gray-800 hover:border-gray-300 disabled:opacity-40 transition-colors"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => { const l = getWeekLabel(navDate); setWeekInput(l); setActiveWeek(l); loadItems(l) }}
-                disabled={loading}
-                className="text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg py-1.5 px-4 hover:border-gray-300 hover:text-gray-900 disabled:opacity-40 transition-colors"
-              >
-                {getWeekLabel(navDate)}
-              </button>
-              <button
-                type="button"
-                onClick={() => handleNavWeek(1)}
-                disabled={loading}
-                className="p-1.5 rounded-lg border border-gray-200 bg-white text-gray-500 hover:text-gray-800 hover:border-gray-300 disabled:opacity-40 transition-colors"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+            <div className="flex gap-3 mb-6 items-center">
+              {/* Navigator */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handleNavWeek(-1)}
+                  disabled={loading}
+                  className="p-1.5 rounded-lg border border-gray-200 bg-white text-gray-500 hover:text-gray-800 hover:border-gray-300 disabled:opacity-40 transition-colors"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { const l = getWeekLabel(navDate); setWeekInput(l); setActiveWeek(l); loadItems(l) }}
+                  disabled={loading}
+                  className="text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg py-1.5 px-4 hover:border-gray-300 hover:text-gray-900 disabled:opacity-40 transition-colors whitespace-nowrap"
+                >
+                  {getWeekLabel(navDate)}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleNavWeek(1)}
+                  disabled={loading}
+                  className="p-1.5 rounded-lg border border-gray-200 bg-white text-gray-500 hover:text-gray-800 hover:border-gray-300 disabled:opacity-40 transition-colors"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
 
-            <form onSubmit={handleSearch} className="mb-6">
-              <div className="flex gap-2">
-                <div className="relative flex-1 max-w-sm">
+              {/* Search */}
+              <form onSubmit={handleSearch} className="flex gap-2 flex-1">
+                <div className="relative flex-1">
                   <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <Input
                     value={weekInput}
@@ -312,11 +296,8 @@ export default function DashboardPage() {
                   <Search className="w-4 h-4 mr-2" />
                   Buscar
                 </Button>
-              </div>
-              <p className="text-xs text-gray-400 mt-1.5">
-                Escribí el nombre exacto de la tarea semanal como aparece en Azure DevOps
-              </p>
-            </form>
+              </form>
+            </div>
 
             {error && (
               <div className="rounded-md bg-red-50 border border-red-200 p-4 mb-4 text-sm text-red-700">
@@ -345,18 +326,19 @@ export default function DashboardPage() {
               </div>
             ) : (
               <>
-                {/* Weekly progress bar */}
-                <WeekProgress
-                  totalHours={weeklyHours}
-                  breakdown={items
-                    .map((item) => ({ title: item.title, hours: itemHours[item.id] || 0 }))
-                    .filter((p) => p.hours > 0)
-                    .sort((a, b) => b.hours - a.hours)
-                  }
-                />
-
-                {/* Mini calendario semanal */}
-                <WeekCalendar items={items} navDate={navDate} />
+                {/* Progress + Calendar side by side */}
+                <div className="flex gap-4 mb-6 items-start">
+                  <WeekProgress
+                    className="shrink-0 w-64"
+                    totalHours={weeklyHours}
+                    breakdown={items
+                      .map((item) => ({ title: item.title, hours: itemHours[item.id] || 0 }))
+                      .filter((p) => p.hours > 0)
+                      .sort((a, b) => b.hours - a.hours)
+                    }
+                  />
+                  <WeekCalendar className="flex-1 min-w-0" items={items} navDate={navDate} />
+                </div>
 
                 {/* Name filter */}
                 <div className="relative mb-3">

@@ -9,6 +9,7 @@ import {
 } from '@/lib/azure-client'
 import { AuthConfig } from '@/lib/types'
 import { getLineaFieldMap, getTaskFieldMap, resolveField } from '@/lib/field-cache'
+import { checkRequest } from '@/lib/rate-limit'
 
 function makeConfig(req: NextRequest): AuthConfig {
   return {
@@ -27,8 +28,9 @@ async function batchMap<T, R>(arr: T[], fn: (item: T) => Promise<R>, size = 10):
 }
 
 export async function GET(req: NextRequest) {
+  const rateLimitErr = checkRequest(req, 'heavy')
+  if (rateLimitErr) return rateLimitErr
   const config = makeConfig(req)
-  if (!config.pat) return NextResponse.json({ error: 'Missing PAT' }, { status: 401 })
 
   const week = req.nextUrl.searchParams.get('week')
   if (!week) return NextResponse.json([])
@@ -56,6 +58,11 @@ export async function GET(req: NextRequest) {
 
     // 2. Expand week tasks → get parent id + child task ids
     const weekTasksExpanded = await batchMap(weekTaskRefs, (r) => getWorkItemWithChildren(config, r.id))
+
+    // 2b. Determine which week tasks are assigned to @Me (show even if empty)
+    const weekTaskIds = weekTasksExpanded.map((wt) => wt.id)
+    const myWeekTaskRefs = await filterWorkItemsByAssignedToMe(config, weekTaskIds)
+    const myWeekTaskIds = new Set(myWeekTaskRefs.map((r) => r.id))
 
     // 3. Fetch parent (ticket) details
     const parentIds = [...new Set(
@@ -156,8 +163,10 @@ export async function GET(req: NextRequest) {
     })
 
     // 9. Group by parent ticket
+    // Keep week task if: assigned to @Me (show even empty) OR has @Me tasks
     const grouped = new Map<number, { id: number; title: string; type: string; state: string; boardColumn: string | null; weekTasks: typeof weekTasksFull }>()
     for (const wt of weekTasksFull) {
+      if (wt.tasks.length === 0 && !myWeekTaskIds.has(wt.id)) continue
       const pid = wt.parentId
       if (!pid) continue
       const parent = parentMap.get(pid) ?? { id: pid, title: `#${pid}`, type: 'Unknown', state: '', boardColumn: null }

@@ -6,6 +6,7 @@ import {
 } from '@/lib/azure-client'
 import { AuthConfig } from '@/lib/types'
 import { getLineaFieldMap, resolveField } from '@/lib/field-cache'
+import { checkRequest } from '@/lib/rate-limit'
 
 function getConfig(req: NextRequest): AuthConfig {
   return {
@@ -16,8 +17,9 @@ function getConfig(req: NextRequest): AuthConfig {
 }
 
 export async function GET(req: NextRequest) {
+  const err = checkRequest(req)
+  if (err) return err
   const config = getConfig(req)
-  if (!config.pat) return NextResponse.json({ error: 'Missing PAT' }, { status: 401 })
 
   const parentId = req.nextUrl.searchParams.get('parentId')
   if (!parentId) return NextResponse.json({ error: 'Missing parentId' }, { status: 400 })

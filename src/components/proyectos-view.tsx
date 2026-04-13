@@ -36,9 +36,10 @@ interface ProyectosViewProps {
   setData: (rows: ProyectoRow[]) => void
   showIncomplete: boolean
   setShowIncomplete: (v: boolean) => void
+  refreshTrigger?: number
 }
 
-export function ProyectosView({ config, data, setData, showIncomplete, setShowIncomplete }: ProyectosViewProps) {
+export function ProyectosView({ config, data, setData, showIncomplete, setShowIncomplete, refreshTrigger }: ProyectosViewProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -52,6 +53,11 @@ export function ProyectosView({ config, data, setData, showIncomplete, setShowIn
     didFetch.current = true
     fetchData()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!refreshTrigger) return
+    fetchData()
+  }, [refreshTrigger]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (editingId !== null) setTimeout(() => editInputRef.current?.select(), 0)

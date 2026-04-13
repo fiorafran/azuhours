@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createLinea, updateLinea, deleteWorkItem } from '@/lib/azure-client'
 import { AuthConfig } from '@/lib/types'
 import { getLineaFieldMap, resolveField } from '@/lib/field-cache'
+import { checkRequest, sanitizeString, parsePositiveInt } from '@/lib/rate-limit'
 
 // Append T12:00:00 so the date doesn't shift when Azure DevOps interprets it as UTC
 function toNoonUtc(dateStr: string): string {
@@ -30,14 +31,18 @@ function mapLineaFields(fields: Record<string, unknown>, horasRef: string, tipoR
 
 // POST /api/azure/linea - Create
 export async function POST(req: NextRequest) {
+  const err = checkRequest(req)
+  if (err) return err
   const config = getConfig(req)
-  if (!config.pat) return NextResponse.json({ error: 'Missing PAT' }, { status: 401 })
 
   try {
     const body = await req.json()
     const { parentId, horas, tipoHora, fecha, cliente, title } = body
-    const parentIdNum = parseInt(parentId)
-    if (!parentId || isNaN(parentIdNum) || parentIdNum <= 0) return NextResponse.json({ error: 'Missing or invalid parentId' }, { status: 400 })
+    const parentIdNum = parsePositiveInt(String(parentId ?? ''))
+    if (!parentIdNum) return NextResponse.json({ error: 'Missing or invalid parentId' }, { status: 400 })
+    if (typeof horas !== 'number' || horas <= 0 || horas > 24) return NextResponse.json({ error: 'Invalid horas' }, { status: 400 })
+    if (sanitizeString(tipoHora, 100) === null) return NextResponse.json({ error: 'Invalid tipoHora' }, { status: 400 })
+    if (sanitizeString(fecha, 20) === null) return NextResponse.json({ error: 'Invalid fecha' }, { status: 400 })
 
     const fieldMap = await getLineaFieldMap(config)
     const horasRef = resolveField(fieldMap, 'horas linea proyecto', 'horas', 'horaslineaproyecto')
@@ -73,14 +78,16 @@ export async function POST(req: NextRequest) {
 
 // PATCH /api/azure/linea - Update
 export async function PATCH(req: NextRequest) {
+  const err = checkRequest(req)
+  if (err) return err
   const config = getConfig(req)
-  if (!config.pat) return NextResponse.json({ error: 'Missing PAT' }, { status: 401 })
 
   try {
     const body = await req.json()
     const { id, horas, tipoHora, fecha, cliente, title } = body
-    const idNum = parseInt(id)
-    if (!id || isNaN(idNum) || idNum <= 0) return NextResponse.json({ error: 'Missing or invalid id' }, { status: 400 })
+    const idNum = parsePositiveInt(String(id ?? ''))
+    if (!idNum) return NextResponse.json({ error: 'Missing or invalid id' }, { status: 400 })
+    if (horas !== undefined && (typeof horas !== 'number' || horas <= 0 || horas > 24)) return NextResponse.json({ error: 'Invalid horas' }, { status: 400 })
 
     const fieldMap = await getLineaFieldMap(config)
     const horasRef = resolveField(fieldMap, 'horas linea proyecto', 'horas', 'horaslineaproyecto')
@@ -116,8 +123,9 @@ export async function PATCH(req: NextRequest) {
 
 // DELETE /api/azure/linea?id=123
 export async function DELETE(req: NextRequest) {
+  const err = checkRequest(req)
+  if (err) return err
   const config = getConfig(req)
-  if (!config.pat) return NextResponse.json({ error: 'Missing PAT' }, { status: 401 })
 
   const id = req.nextUrl.searchParams.get('id')
   const deleteId = parseInt(id ?? '')

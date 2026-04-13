@@ -28,6 +28,7 @@ interface TicketsViewProps {
   setItems: React.Dispatch<React.SetStateAction<TicketItem[]>>
   treesMap: TicketTreesMap
   setTreesMap: React.Dispatch<React.SetStateAction<TicketTreesMap>>
+  refreshTrigger?: number
 }
 
 function getWeekLabel(date: Date): string {
@@ -465,7 +466,7 @@ function TicketCard({ item, config, weekFilter, tree, onLoad, onUpdate }: Ticket
 }
 
 // ---- TicketsView ----
-export function TicketsView({ config, items, setItems, treesMap, setTreesMap }: TicketsViewProps) {
+export function TicketsView({ config, items, setItems, treesMap, setTreesMap, refreshTrigger }: TicketsViewProps) {
   const [loading, setLoading] = useState(false)
   const [weekFilter, setWeekFilter] = useState('')
   const [nameFilter, setNameFilter] = useState('')
@@ -476,6 +477,15 @@ export function TicketsView({ config, items, setItems, treesMap, setTreesMap }: 
     if (items.length === 0) loadItems()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    if (!refreshTrigger) return
+    setItems([])
+    setTreesMap({})
+    preloadingRef.current = false
+    loadItems()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshTrigger])
 
   // Background preload trees as soon as we have the items list
   useEffect(() => {

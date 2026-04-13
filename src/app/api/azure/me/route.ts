@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/azure-client'
 import { AuthConfig } from '@/lib/types'
+import { checkRequest } from '@/lib/rate-limit'
 
 export async function GET(req: NextRequest) {
-  const pat = req.headers.get('x-azure-pat')
+  const err = checkRequest(req)
+  if (err) return err
+
+  const pat = req.headers.get('x-azure-pat')!
   const org = req.headers.get('x-azure-org') || 'IsbelSA'
   const project = req.headers.get('x-azure-project') || 'Proyectos'
-
-  if (!pat) {
-    return NextResponse.json({ error: 'Missing PAT' }, { status: 401 })
-  }
-
   const config: AuthConfig = { pat, org, project }
 
   try {

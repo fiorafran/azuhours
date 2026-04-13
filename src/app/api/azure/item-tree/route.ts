@@ -6,6 +6,7 @@ import {
 } from '@/lib/azure-client'
 import { AuthConfig } from '@/lib/types'
 import { getLineaFieldMap, resolveField } from '@/lib/field-cache'
+import { checkRequest } from '@/lib/rate-limit'
 
 function makeConfig(req: NextRequest): AuthConfig {
   return {
@@ -26,8 +27,9 @@ async function batchMap<T, R>(arr: T[], fn: (item: T) => Promise<R>, size = 10):
 // GET /api/azure/item-tree?parentId={id}
 // Returns the full week task → task → linea tree for a given BacklogItem
 export async function GET(req: NextRequest) {
+  const rateLimitErr = checkRequest(req, 'heavy')
+  if (rateLimitErr) return rateLimitErr
   const config = makeConfig(req)
-  if (!config.pat) return NextResponse.json({ error: 'Missing PAT' }, { status: 401 })
 
   const parentIdStr = req.nextUrl.searchParams.get('parentId')
   const parentId = parseInt(parentIdStr ?? '')

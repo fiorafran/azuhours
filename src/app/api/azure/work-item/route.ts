@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { azureRequest, projectPath } from '@/lib/azure-client'
 import { AuthConfig } from '@/lib/types'
+import { checkRequest } from '@/lib/rate-limit'
 
 function makeConfig(req: NextRequest): AuthConfig {
   return {
@@ -12,8 +13,9 @@ function makeConfig(req: NextRequest): AuthConfig {
 
 // GET /api/azure/work-item?id={id}
 export async function GET(req: NextRequest) {
+  const err = checkRequest(req)
+  if (err) return err
   const config = makeConfig(req)
-  if (!config.pat) return NextResponse.json({ error: 'Missing PAT' }, { status: 401 })
 
   const id = req.nextUrl.searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
@@ -38,8 +40,9 @@ export async function GET(req: NextRequest) {
 
 // PATCH /api/azure/work-item
 export async function PATCH(req: NextRequest) {
+  const err = checkRequest(req)
+  if (err) return err
   const config = makeConfig(req)
-  if (!config.pat) return NextResponse.json({ error: 'Missing PAT' }, { status: 401 })
 
   const body = await req.json()
   const { id, title, boardColumn } = body as {

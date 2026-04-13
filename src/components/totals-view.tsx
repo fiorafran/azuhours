@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -32,6 +32,7 @@ interface TotalsViewProps {
   setData: (d: ClienteGroup[]) => void
   setFrom: (v: string) => void
   setTo: (v: string) => void
+  refreshTrigger?: number
 }
 
 function ClienteCard({ group }: { group: ClienteGroup }) {
@@ -84,24 +85,21 @@ function ClienteCard({ group }: { group: ClienteGroup }) {
   )
 }
 
-export function TotalsView({ config, data, from, to, setData, setFrom, setTo }: TotalsViewProps) {
+export function TotalsView({ config, data, from, to, setData, setFrom, setTo, refreshTrigger }: TotalsViewProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [searched, setSearched] = useState(data.length > 0)
 
   const totalGeneral = data.reduce((sum, g) => sum + g.totalHoras, 0)
 
-  async function handleSearch(e: React.FormEvent) {
-    e.preventDefault()
+  async function fetchTotals() {
     setLoading(true)
     setError('')
     setSearched(true)
-
     try {
       const params = new URLSearchParams()
       if (from) params.set('from', from)
       if (to) params.set('to', to)
-
       const res = await fetch(`/api/azure/totals?${params}`, {
         headers: {
           'x-azure-pat': config.pat,
@@ -121,6 +119,16 @@ export function TotalsView({ config, data, from, to, setData, setFrom, setTo }: 
       setLoading(false)
     }
   }
+
+  async function handleSearch(e: React.FormEvent) {
+    e.preventDefault()
+    fetchTotals()
+  }
+
+  useEffect(() => {
+    if (!refreshTrigger || !searched) return
+    fetchTotals()
+  }, [refreshTrigger]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="space-y-6">
