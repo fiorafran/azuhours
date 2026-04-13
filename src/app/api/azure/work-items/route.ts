@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import {
   getWorkItemsByWeek,
+  filterWorkItemsByAssignedToMe,
   getWorkItemWithChildren,
   getWorkItemsBatch,
   extractChildIds,
@@ -76,13 +77,16 @@ export async function GET(req: NextRequest) {
       },
     ]))
 
-    // 4. Collect all task ids across all week tasks
+    // 4. Collect all task ids across all week tasks, filtered to @Me
     const allTaskIds = weekTasksExpanded.flatMap((wt) => extractChildIds(wt.relations))
     const uniqueTaskIds = [...new Set(allTaskIds)]
+    const myTaskRefs = await filterWorkItemsByAssignedToMe(config, uniqueTaskIds)
+    const myTaskIds = new Set(myTaskRefs.map((r) => r.id))
+    const filteredTaskIds = uniqueTaskIds.filter((id) => myTaskIds.has(id))
 
     // 5. Fetch all task details in one batch (including discovered due date field)
-    const taskDetails = uniqueTaskIds.length > 0
-      ? await getWorkItemsBatch(config, uniqueTaskIds, [
+    const taskDetails = filteredTaskIds.length > 0
+      ? await getWorkItemsBatch(config, filteredTaskIds, [
           'System.Id', 'System.Title', 'System.WorkItemType', 'System.State',
           'Microsoft.VSTS.Scheduling.OriginalEstimate',
           'Microsoft.VSTS.Scheduling.CompletedWork',
@@ -92,7 +96,7 @@ export async function GET(req: NextRequest) {
     const taskDetailMap = new Map(taskDetails.map((t) => [t['id'] as number, t]))
 
     // 6. Expand all tasks to get linea ids
-    const tasksExpanded = await batchMap(uniqueTaskIds, (id) => getWorkItemWithChildren(config, id))
+    const tasksExpanded = await batchMap(filteredTaskIds, (id) => getWorkItemWithChildren(config, id))
     const allLineaIds = tasksExpanded.flatMap((t) => extractChildIds(t.relations))
     const uniqueLineaIds = [...new Set(allLineaIds)]
 
@@ -125,7 +129,7 @@ export async function GET(req: NextRequest) {
 
     // 8. Assemble week tasks with tasks with lineas
     const weekTasksFull = weekTasksExpanded.map((wt) => {
-      const taskIds = extractChildIds(wt.relations)
+      const taskIds = extractChildIds(wt.relations).filter((id) => myTaskIds.has(id))
       const tasks = taskIds.map((tid) => {
         const td = taskDetailMap.get(tid)
         const tf = td ? (td.fields as Record<string, unknown>) : {}

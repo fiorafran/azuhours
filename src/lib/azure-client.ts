@@ -53,6 +53,19 @@ export async function getCurrentUser(config: AuthConfig) {
   }
 }
 
+export async function filterWorkItemsByAssignedToMe(config: AuthConfig, ids: number[]): Promise<{ id: number }[]> {
+  if (ids.length === 0) return []
+  const wiql = {
+    query: `SELECT [System.Id] FROM WorkItems WHERE [System.Id] IN (${ids.join(',')}) AND [System.AssignedTo] = @Me`,
+  }
+  const result = await azureRequest<{ workItems: { id: number }[] }>(
+    config,
+    `${projectPath(config)}/_apis/wit/wiql`,
+    { method: 'POST', body: JSON.stringify(wiql) }
+  )
+  return result.workItems || []
+}
+
 export async function getWorkItemsByWeek(config: AuthConfig, weekTitle: string): Promise<{ id: number }[]> {
   // Escape single quotes for WIQL
   const safe = weekTitle.replace(/'/g, "''")

@@ -591,7 +591,7 @@ export function TicketsView({ config, items, setItems, treesMap, setTreesMap }: 
           <Input
             value={weekFilter}
             onChange={(e) => setWeekFilter(e.target.value)}
-            placeholder="Filtrar por semana..."
+            placeholder="Filtrar por semana/tarea..."
             className="pl-9 bg-white"
           />
         </div>

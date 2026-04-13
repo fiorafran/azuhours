@@ -29,6 +29,7 @@ export default function DashboardPage() {
   const [weekInput, setWeekInput] = useState('')
   const [activeWeek, setActiveWeek] = useState('')
   const [weeklyHours, setWeeklyHours] = useState(0)
+  const [itemHours, setItemHours] = useState<Record<number, number>>({})
   const [nameFilter, setNameFilter] = useState('')
   const [navDate, setNavDate] = useState<Date>(() => new Date())
 
@@ -64,6 +65,7 @@ export default function DashboardPage() {
     setError('')
     setItems([])
     setWeeklyHours(0)
+    setItemHours({})
     setNameFilter('')
     try {
       const params = new URLSearchParams({ week: week.trim() })
@@ -81,14 +83,19 @@ export default function DashboardPage() {
       }
       setItems(data)
       // Calculate initial weekly hours from pre-loaded lineas
-      const total = data.reduce((sum: number, ticket: BacklogItem) =>
-        sum + (ticket.weekTasks || []).reduce((s2, wt) =>
+      const hourMap: Record<number, number> = {}
+      let total = 0
+      for (const ticket of data as BacklogItem[]) {
+        const h = (ticket.weekTasks || []).reduce((s2, wt) =>
           s2 + (wt.tasks || []).reduce((s3, task) =>
             s3 + ((task.lineas as { horasLineaProyecto?: number }[]) || [])
               .reduce((s4, l) => s4 + (l.horasLineaProyecto || 0), 0)
           , 0)
         , 0)
-      , 0)
+        hourMap[ticket.id] = Math.round(h * 100) / 100
+        total += h
+      }
+      setItemHours(hourMap)
       setWeeklyHours(total)
       if (data.length === 0) toast.info(`No se encontraron tareas para "${week.trim()}"`)
     } catch {
@@ -342,16 +349,7 @@ export default function DashboardPage() {
                 <WeekProgress
                   totalHours={weeklyHours}
                   breakdown={items
-                    .map((item) => ({
-                      title: item.title,
-                      hours: Math.round(
-                        (item.weekTasks || []).reduce((s, wt) =>
-                          s + (wt.tasks || []).reduce((s2, t) =>
-                            s2 + ((t.lineas as { horasLineaProyecto?: number }[]) || [])
-                              .reduce((s3, l) => s3 + (l.horasLineaProyecto || 0), 0)
-                          , 0)
-                        , 0) * 100) / 100,
-                    }))
+                    .map((item) => ({ title: item.title, hours: itemHours[item.id] || 0 }))
                     .filter((p) => p.hours > 0)
                     .sort((a, b) => b.hours - a.hours)
                   }
@@ -388,7 +386,10 @@ export default function DashboardPage() {
                         key={item.id}
                         item={item}
                         config={config!}
-                        onHoursChange={(delta) => setWeeklyHours((h) => h + delta)}
+                        onHoursChange={(delta) => {
+                          setWeeklyHours((h) => h + delta)
+                          setItemHours((prev) => ({ ...prev, [item.id]: Math.round(((prev[item.id] || 0) + delta) * 100) / 100 }))
+                        }}
                         onUpdate={(id, updates) =>
                           setItems((prev) =>
                             prev.map((i) =>
