@@ -16,6 +16,7 @@ export interface WorkItem {
   title: string
   type: string
   state: string
+  boardColumn?: string | null
   assignedTo?: string
   children?: WorkItem[]
   fields?: Record<string, unknown>

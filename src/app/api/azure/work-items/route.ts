@@ -51,7 +51,11 @@ export async function GET(req: NextRequest) {
     const parentIds = [...new Set(
       weekTasksExpanded.map((wt) => extractParentId(wt.relations)).filter((id): id is number => id !== null)
     )]
-    const parentDetails = parentIds.length > 0 ? await getWorkItemsBatch(config, parentIds) : []
+    const parentDetails = parentIds.length > 0
+      ? await getWorkItemsBatch(config, parentIds, [
+          'System.Id', 'System.Title', 'System.WorkItemType', 'System.State', 'System.BoardColumn',
+        ])
+      : []
     const parentMap = new Map(parentDetails.map((p) => [
       p['id'] as number,
       {
@@ -59,6 +63,7 @@ export async function GET(req: NextRequest) {
         title: (p.fields as Record<string, unknown>)['System.Title'] as string,
         type: (p.fields as Record<string, unknown>)['System.WorkItemType'] as string,
         state: (p.fields as Record<string, unknown>)['System.State'] as string,
+        boardColumn: (p.fields as Record<string, unknown>)['System.BoardColumn'] as string | null ?? null,
       },
     ]))
 
@@ -132,11 +137,11 @@ export async function GET(req: NextRequest) {
     })
 
     // 9. Group by parent ticket
-    const grouped = new Map<number, { id: number; title: string; type: string; state: string; weekTasks: typeof weekTasksFull }>()
+    const grouped = new Map<number, { id: number; title: string; type: string; state: string; boardColumn: string | null; weekTasks: typeof weekTasksFull }>()
     for (const wt of weekTasksFull) {
       const pid = wt.parentId
       if (!pid) continue
-      const parent = parentMap.get(pid) ?? { id: pid, title: `#${pid}`, type: 'Unknown', state: '' }
+      const parent = parentMap.get(pid) ?? { id: pid, title: `#${pid}`, type: 'Unknown', state: '', boardColumn: null }
       if (!grouped.has(pid)) grouped.set(pid, { ...parent, weekTasks: [] })
       grouped.get(pid)!.weekTasks.push(wt)
     }

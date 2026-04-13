@@ -382,6 +382,13 @@ export default function DashboardPage() {
                         item={item}
                         config={config!}
                         onHoursChange={(delta) => setWeeklyHours((h) => h + delta)}
+                        onUpdate={(id, updates) =>
+                          setItems((prev) =>
+                            prev.map((i) =>
+                              i.id === id ? { ...i, title: updates.title, state: updates.state, boardColumn: updates.boardColumn } : i
+                            )
+                          )
+                        }
                       />
                     ))}
                 </div>
