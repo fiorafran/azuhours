@@ -12,6 +12,7 @@ import { LogOut, RefreshCw, User, Search, Calendar, BarChart2, Filter, ClockArro
 import { toast } from 'sonner'
 import { TotalsView, ClienteGroup } from '@/components/totals-view'
 import { WeekProgress } from '@/components/week-progress'
+import { WeekCalendar } from '@/components/week-calendar'
 import { ProyectosView, ProyectoRow } from '@/components/proyectos-view'
 import { TicketsView, TicketItem, TicketTreesMap } from '@/components/tickets-view'
 
@@ -355,6 +356,9 @@ export default function DashboardPage() {
                     .sort((a, b) => b.hours - a.hours)
                   }
                 />
+
+                {/* Mini calendario semanal */}
+                <WeekCalendar items={items} navDate={navDate} />
 
                 {/* Name filter */}
                 <div className="relative mb-3">

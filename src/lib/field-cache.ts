@@ -5,9 +5,19 @@ import { AuthConfig } from './types'
 const cache = new Map<string, Record<string, string>>()
 
 export async function getLineaFieldMap(config: AuthConfig): Promise<Record<string, string>> {
-  const key = `${config.org}/${config.project}`
+  const key = `${config.org}/${config.project}/linea`
   if (cache.has(key)) return cache.get(key)!
   const fields = await getWorkItemTypeFields(config, 'linea')
+  const map: Record<string, string> = {}
+  for (const f of fields) map[f.name.toLowerCase().trim()] = f.referenceName
+  cache.set(key, map)
+  return map
+}
+
+export async function getTaskFieldMap(config: AuthConfig): Promise<Record<string, string>> {
+  const key = `${config.org}/${config.project}/task`
+  if (cache.has(key)) return cache.get(key)!
+  const fields = await getWorkItemTypeFields(config, 'Task')
   const map: Record<string, string> = {}
   for (const f of fields) map[f.name.toLowerCase().trim()] = f.referenceName
   cache.set(key, map)

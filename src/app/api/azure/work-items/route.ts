@@ -7,7 +7,7 @@ import {
   extractParentId,
 } from '@/lib/azure-client'
 import { AuthConfig } from '@/lib/types'
-import { getLineaFieldMap, resolveField } from '@/lib/field-cache'
+import { getLineaFieldMap, getTaskFieldMap, resolveField } from '@/lib/field-cache'
 
 function makeConfig(req: NextRequest): AuthConfig {
   return {
@@ -33,8 +33,17 @@ export async function GET(req: NextRequest) {
   if (!week) return NextResponse.json([])
 
   try {
-    // Discover linea custom fields once
-    const fieldMap = await getLineaFieldMap(config)
+    // Discover custom fields for linea and task types
+    const [fieldMap, taskFieldMap] = await Promise.all([
+      getLineaFieldMap(config),
+      getTaskFieldMap(config),
+    ])
+    const dueDateRef = resolveField(taskFieldMap,
+      'fecha entrega',
+      'due date',
+      'fechaentrega',
+      'Microsoft.VSTS.Scheduling.DueDate'
+    )
     const horasRef = resolveField(fieldMap, 'horas linea proyecto', 'horas', 'horaslineaproyecto')
     const tipoRef = resolveField(fieldMap, 'tipo hora', 'tipohora')
     const fechaRef = resolveField(fieldMap, 'fecha linea', 'fechalinea', 'fecha')
@@ -71,9 +80,14 @@ export async function GET(req: NextRequest) {
     const allTaskIds = weekTasksExpanded.flatMap((wt) => extractChildIds(wt.relations))
     const uniqueTaskIds = [...new Set(allTaskIds)]
 
-    // 5. Fetch all task details in one batch
+    // 5. Fetch all task details in one batch (including discovered due date field)
     const taskDetails = uniqueTaskIds.length > 0
-      ? await getWorkItemsBatch(config, uniqueTaskIds)
+      ? await getWorkItemsBatch(config, uniqueTaskIds, [
+          'System.Id', 'System.Title', 'System.WorkItemType', 'System.State',
+          'Microsoft.VSTS.Scheduling.OriginalEstimate',
+          'Microsoft.VSTS.Scheduling.CompletedWork',
+          dueDateRef,
+        ])
       : []
     const taskDetailMap = new Map(taskDetails.map((t) => [t['id'] as number, t]))
 
@@ -122,6 +136,7 @@ export async function GET(req: NextRequest) {
           type: tf['System.WorkItemType'] as string ?? 'Task',
           state: tf['System.State'] as string ?? '',
           estimatedHours: tf['Microsoft.VSTS.Scheduling.OriginalEstimate'] as number | undefined,
+          dueDate: tf[dueDateRef] as string | undefined,
           lineas: lineaIds.map((lid) => lineaMap.get(lid)).filter(Boolean),
         }
       })
