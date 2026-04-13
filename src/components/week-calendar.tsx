@@ -1,9 +1,9 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { BacklogItem, WeekTask, TaskItem } from '@/lib/types'
 import { Badge } from '@/components/ui/badge'
-import { CalendarDays } from 'lucide-react'
+import { CalendarDays, ChevronDown, ChevronRight } from 'lucide-react'
 
 interface WeekCalendarProps {
   items: BacklogItem[]
@@ -64,6 +64,7 @@ function parseLocalDate(iso: string): Date {
 }
 
 export function WeekCalendar({ items, navDate }: WeekCalendarProps) {
+  const [open, setOpen] = useState(true)
   const { days, projectColorMap } = useMemo(() => {
     const monday = getMondayOf(navDate)
     const today = new Date()
@@ -113,11 +114,18 @@ export function WeekCalendar({ items, navDate }: WeekCalendarProps) {
 
   return (
     <div className="mb-6">
-      <div className="flex items-center gap-2 mb-3">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-2 mb-3 w-full text-left group"
+      >
         <CalendarDays className="w-4 h-4 text-gray-400" />
-        <span className="text-sm font-medium text-gray-500">Calendario de la semana</span>
-      </div>
-      <div className="grid grid-cols-5 gap-2">
+        <span className="text-sm font-medium text-gray-500 flex-1">Calendario de la semana</span>
+        <ChevronDown
+          className={`w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-transform duration-300 ${open ? 'rotate-0' : '-rotate-90'}`}
+        />
+      </button>
+      <div className={`grid transition-all duration-300 ease-in-out ${open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+      <div className="overflow-hidden"><div className="grid grid-cols-5 gap-2 pb-1">
         {days.map((day) => {
           // Group tasks by project within this day
           const byProject = new Map<number, { title: string; colorIdx: number; tasks: CalendarTask[] }>()
@@ -187,7 +195,7 @@ export function WeekCalendar({ items, navDate }: WeekCalendarProps) {
             </div>
           )
         })}
-      </div>
+      </div></div></div>
     </div>
   )
 }
