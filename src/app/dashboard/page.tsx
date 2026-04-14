@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/use-auth'
 import { BacklogItem } from '@/lib/types'
@@ -160,7 +160,7 @@ export default function DashboardPage() {
               { id: 'tickets', label: 'Tickets', icon: <Layers className="w-4 h-4 shrink-0" /> },
               { id: 'totales', label: 'Totales', icon: <BarChart2 className="w-4 h-4 shrink-0" /> },
               { id: 'proyectos', label: 'Proyectos', icon: <Briefcase className="w-4 h-4 shrink-0" /> },
-            ] as { id: Tab; label: string; icon: JSX.Element }[]).map(({ id, label, icon }) => (
+            ] as { id: Tab; label: string; icon: React.ReactNode }[]).map(({ id, label, icon }) => (
               <button
                 key={id}
                 onClick={() => setTab(id)}
