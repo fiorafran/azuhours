@@ -146,9 +146,9 @@ export function TaskItemComponent({ task, config, defaultCliente, onHoursChange,
               {totalHoras}h cargadas
             </Badge>
           )}
-          {task.estimatedHours && (
+          {task.estimatedHours != null && task.estimatedHours > 0 && (
             <Badge variant="secondary" className="text-xs text-gray-500">
-              {task.estimatedHours}h estimadas
+              {task.estimatedHours}h est.
             </Badge>
           )}
           {onDelete && <DeleteConfirm onConfirm={(e) => { e.stopPropagation(); onDelete() }} />}

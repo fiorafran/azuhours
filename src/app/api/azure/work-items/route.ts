@@ -47,6 +47,12 @@ export async function GET(req: NextRequest) {
       'fechaentrega',
       'Microsoft.VSTS.Scheduling.DueDate'
     )
+    const estHorasRef = resolveField(taskFieldMap,
+      'horas estimadas de tarea',
+      'horasestimadasdetarea',
+      'horas estimadas',
+      'Microsoft.VSTS.Scheduling.OriginalEstimate'
+    )
     const horasRef = resolveField(fieldMap, 'horas linea proyecto', 'horas', 'horaslineaproyecto')
     const tipoRef = resolveField(fieldMap, 'tipo hora', 'tipohora')
     const fechaRef = resolveField(fieldMap, 'fecha linea', 'fechalinea', 'fecha')
@@ -95,8 +101,8 @@ export async function GET(req: NextRequest) {
     const taskDetails = filteredTaskIds.length > 0
       ? await getWorkItemsBatch(config, filteredTaskIds, [
           'System.Id', 'System.Title', 'System.WorkItemType', 'System.State',
-          'Microsoft.VSTS.Scheduling.OriginalEstimate',
           'Microsoft.VSTS.Scheduling.CompletedWork',
+          estHorasRef,
           dueDateRef,
         ])
       : []
@@ -146,7 +152,7 @@ export async function GET(req: NextRequest) {
           title: tf['System.Title'] as string ?? `#${tid}`,
           type: tf['System.WorkItemType'] as string ?? 'Task',
           state: tf['System.State'] as string ?? '',
-          estimatedHours: tf['Microsoft.VSTS.Scheduling.OriginalEstimate'] as number | undefined,
+          estimatedHours: tf[estHorasRef] as number | undefined,
           dueDate: tf[dueDateRef] as string | undefined,
           lineas: lineaIds.map((lid) => lineaMap.get(lid)).filter(Boolean),
         }

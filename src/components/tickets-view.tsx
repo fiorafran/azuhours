@@ -470,7 +470,9 @@ export function TicketsView({ config, items, setItems, treesMap, setTreesMap, re
   const [loading, setLoading] = useState(false)
   const [weekFilter, setWeekFilter] = useState('')
   const [nameFilter, setNameFilter] = useState('')
-  const [hiddenStates, setHiddenStates] = useState<Set<string>>(new Set())
+  const [hiddenStates, setHiddenStates] = useState<Set<string>>(
+    new Set(['Paso a Soporte', 'Pausado / Descartado', 'Resuelto', 'New'])
+  )
   const preloadingRef = useRef(false)
 
   useEffect(() => {

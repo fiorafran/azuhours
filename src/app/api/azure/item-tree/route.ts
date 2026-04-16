@@ -5,7 +5,7 @@ import {
   extractChildIds,
 } from '@/lib/azure-client'
 import { AuthConfig } from '@/lib/types'
-import { getLineaFieldMap, resolveField } from '@/lib/field-cache'
+import { getLineaFieldMap, getTaskFieldMap, resolveField } from '@/lib/field-cache'
 import { checkRequest } from '@/lib/rate-limit'
 
 function makeConfig(req: NextRequest): AuthConfig {
@@ -37,11 +37,20 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Missing parentId' }, { status: 400 })
 
   try {
-    const fieldMap = await getLineaFieldMap(config)
+    const [fieldMap, taskFieldMap] = await Promise.all([
+      getLineaFieldMap(config),
+      getTaskFieldMap(config),
+    ])
     const horasRef = resolveField(fieldMap, 'horas linea proyecto', 'horas', 'horaslineaproyecto')
     const tipoRef = resolveField(fieldMap, 'tipo hora', 'tipohora')
     const fechaRef = resolveField(fieldMap, 'fecha linea', 'fechalinea', 'fecha')
     const clienteRef = resolveField(fieldMap, 'cliente')
+    const estHorasRef = resolveField(taskFieldMap,
+      'horas estimadas de tarea',
+      'horasestimadasdetarea',
+      'horas estimadas',
+      'Microsoft.VSTS.Scheduling.OriginalEstimate'
+    )
 
     // 1. Get BacklogItem's direct children (week tasks)
     const parentExpanded = await getWorkItemWithChildren(config, parentId)
@@ -62,7 +71,11 @@ export async function GET(req: NextRequest) {
     // 4. Fetch task details + expand tasks to find linea children
     const [taskDetails, tasksExpanded] = allTaskIds.length > 0
       ? await Promise.all([
-          getWorkItemsBatch(config, allTaskIds),
+          getWorkItemsBatch(config, allTaskIds, [
+            'System.Id', 'System.Title', 'System.WorkItemType', 'System.State',
+            'Microsoft.VSTS.Scheduling.CompletedWork',
+            estHorasRef,
+          ]),
           batchMap(allTaskIds, (id) => getWorkItemWithChildren(config, id)),
         ])
       : [[], []] as [Awaited<ReturnType<typeof getWorkItemsBatch>>, Awaited<ReturnType<typeof getWorkItemWithChildren>>[]]
@@ -115,7 +128,7 @@ export async function GET(req: NextRequest) {
           title: (tf['System.Title'] as string) ?? `#${tid}`,
           type: (tf['System.WorkItemType'] as string) ?? 'Task',
           state: (tf['System.State'] as string) ?? '',
-          estimatedHours: tf['Microsoft.VSTS.Scheduling.OriginalEstimate'] as number | undefined,
+          estimatedHours: tf[estHorasRef] as number | undefined,
           lineas: lineaIds.map((lid) => lineaMap.get(lid)).filter(Boolean),
         }
       })

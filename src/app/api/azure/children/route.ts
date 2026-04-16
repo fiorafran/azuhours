@@ -5,7 +5,7 @@ import {
   getWorkItemsBatch,
 } from '@/lib/azure-client'
 import { AuthConfig } from '@/lib/types'
-import { getLineaFieldMap, resolveField } from '@/lib/field-cache'
+import { getLineaFieldMap, getTaskFieldMap, resolveField } from '@/lib/field-cache'
 import { checkRequest } from '@/lib/rate-limit'
 
 function getConfig(req: NextRequest): AuthConfig {
@@ -29,19 +29,28 @@ export async function GET(req: NextRequest) {
     const childIds = extractChildIds(parent.relations)
     if (childIds.length === 0) return NextResponse.json([])
 
-    // Discover linea custom field names
-    const fieldMap = await getLineaFieldMap(config)
+    // Discover custom field names
+    const [fieldMap, taskFieldMap] = await Promise.all([
+      getLineaFieldMap(config),
+      getTaskFieldMap(config),
+    ])
     const horasRef = resolveField(fieldMap, 'horas linea proyecto', 'horas', 'horaslineaproyecto')
     const tipoRef = resolveField(fieldMap, 'tipo hora', 'tipohora')
     const fechaRef = resolveField(fieldMap, 'fecha linea', 'fechalinea', 'fecha')
     const clienteRef = resolveField(fieldMap, 'cliente')
+    const estHorasRef = resolveField(taskFieldMap,
+      'horas estimadas de tarea',
+      'horasestimadasdetarea',
+      'horas estimadas',
+      'Microsoft.VSTS.Scheduling.OriginalEstimate'
+    )
 
     const children = await getWorkItemsBatch(config, childIds, [
       'System.Id',
       'System.Title',
       'System.WorkItemType',
       'System.State',
-      'Microsoft.VSTS.Scheduling.OriginalEstimate',
+      estHorasRef,
       horasRef,
       tipoRef,
       fechaRef,
@@ -55,7 +64,7 @@ export async function GET(req: NextRequest) {
         title: f['System.Title'] as string,
         type: f['System.WorkItemType'] as string,
         state: f['System.State'] as string,
-        estimatedHours: f['Microsoft.VSTS.Scheduling.OriginalEstimate'] as number | undefined,
+        estimatedHours: f[estHorasRef] as number | undefined,
         horasLineaProyecto: f[horasRef] as number | undefined,
         tipoHora: f[tipoRef] as string | undefined,
         fechaLinea: f[fechaRef] as string | undefined,

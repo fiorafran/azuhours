@@ -52,11 +52,12 @@ export function isValidPat(pat: string): boolean {
 const WINDOW_MS = 60_000 // 1 minute
 
 // Reads: generous limit (calendar, preloads, etc.)
-const READ_LIMIT = 80
+const READ_LIMIT = 120
 // Writes: strict (create/update/delete lineas, tasks)
-const WRITE_LIMIT = 20
+const WRITE_LIMIT = 30
 // Heavy reads: WIQL + batch fetches (work-items full tree)
-const HEAVY_READ_LIMIT = 20
+// Tickets tab preloads ~N item-trees in parallel — needs room for a full load
+const HEAVY_READ_LIMIT = 60
 
 const WRITE_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE'])
 

@@ -126,77 +126,76 @@ export function WeekCalendar({ items, navDate, className = '' }: WeekCalendarPro
         />
       </button>
       <div className={`grid transition-all duration-300 ease-in-out ${open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
-      <div className="overflow-hidden"><div className="grid grid-cols-5 gap-2 pb-1">
-        {days.map((day) => {
-          // Group tasks by project within this day
-          const byProject = new Map<number, { title: string; colorIdx: number; tasks: CalendarTask[] }>()
-          for (const task of day.tasks) {
-            if (!byProject.has(task.projectId)) {
-              byProject.set(task.projectId, {
-                title: task.projectTitle,
-                colorIdx: projectColorMap.get(task.projectId) ?? 0,
-                tasks: [],
-              })
+        <div className="overflow-hidden"><div className="grid grid-cols-5 gap-2 pb-1">
+          {days.map((day) => {
+            // Group tasks by project within this day
+            const byProject = new Map<number, { title: string; colorIdx: number; tasks: CalendarTask[] }>()
+            for (const task of day.tasks) {
+              if (!byProject.has(task.projectId)) {
+                byProject.set(task.projectId, {
+                  title: task.projectTitle,
+                  colorIdx: projectColorMap.get(task.projectId) ?? 0,
+                  tasks: [],
+                })
+              }
+              byProject.get(task.projectId)!.tasks.push(task)
             }
-            byProject.get(task.projectId)!.tasks.push(task)
-          }
 
-          return (
-            <div key={day.label} className="min-w-0">
-              {/* Day header */}
-              <div
-                className={`text-center text-xs font-semibold mb-1.5 py-1 rounded-md ${
-                  day.isToday
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-500 bg-gray-100'
-                }`}
-              >
-                {day.label}
-              </div>
+            return (
+              <div key={day.label} className="min-w-0">
+                {/* Day header */}
+                <div
+                  className={`text-center text-xs font-semibold mb-1.5 py-1 rounded-md ${day.isToday
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-500 bg-gray-100'
+                    }`}
+                >
+                  {day.label}
+                </div>
 
-              {/* Tasks */}
-              <div className="space-y-1.5 min-h-[40px]">
-                {day.tasks.length === 0 ? (
-                  <div className="h-8 rounded border border-dashed border-gray-200" />
-                ) : (
-                  Array.from(byProject.values()).map((proj) => {
-                    const palette = PROJECT_PALETTE[proj.colorIdx]
-                    return (
-                      <div
-                        key={proj.title}
-                        className={`rounded-md border px-2 py-1.5 ${palette.bg} ${palette.border}`}
-                      >
-                        {/* Project name */}
-                        <p className={`text-[10px] font-semibold uppercase tracking-wide truncate mb-1 ${palette.text}`}>
-                          {proj.title}
-                        </p>
-                        {/* Tasks */}
-                        <div className="space-y-1">
-                          {proj.tasks.map((task) => (
-                            <div key={task.id} className="flex items-start justify-between gap-1">
-                              <span className="text-xs text-gray-700 leading-tight truncate flex-1">
-                                {task.title}
-                              </span>
-                              {task.estimatedHours != null && (
-                                <Badge
-                                  variant="secondary"
-                                  className={`shrink-0 text-[10px] px-1 py-0 h-4 ${palette.badge}`}
-                                >
-                                  {task.estimatedHours}h
-                                </Badge>
-                              )}
-                            </div>
-                          ))}
+                {/* Tasks */}
+                <div className="space-y-1.5 min-h-[40px]">
+                  {day.tasks.length === 0 ? (
+                    <div className="h-8 rounded border border-dashed border-gray-200" />
+                  ) : (
+                    Array.from(byProject.values()).map((proj) => {
+                      const palette = PROJECT_PALETTE[proj.colorIdx]
+                      return (
+                        <div
+                          key={proj.title}
+                          className={`rounded-md border px-2 py-1.5 ${palette.bg} ${palette.border}`}
+                        >
+                          {/* Project name */}
+                          <p className={`text-[10px] font-semibold uppercase tracking-wide truncate mb-1 ${palette.text}`}>
+                            {proj.title}
+                          </p>
+                          {/* Tasks */}
+                          <div className="space-y-1">
+                            {proj.tasks.map((task) => (
+                              <div key={task.id} className="flex items-start justify-between gap-1">
+                                <span className="text-xs text-gray-700 leading-tight truncate flex-1">
+                                  {task.title}
+                                </span>
+                                {task.estimatedHours != null && (
+                                  <Badge
+                                    variant="secondary"
+                                    className={`shrink-0 text-[10px] px-1 py-0 h-4 ${palette.badge}`}
+                                  >
+                                    {task.estimatedHours}h
+                                  </Badge>
+                                )}
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )
-                  })
-                )}
+                      )
+                    })
+                  )}
+                </div>
               </div>
-            </div>
-          )
-        })}
-      </div></div></div>
+            )
+          })}
+        </div></div></div>
     </div>
   )
 }

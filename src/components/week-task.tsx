@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ChevronDown, ChevronRight, Calendar, Plus, Trash2, Check, X } from 'lucide-react'
+import { ChevronDown, ChevronRight, Calendar, Plus, Trash2, Check, X, Clock } from 'lucide-react'
 import { WeekTask as WeekTaskType, TaskItem as TaskItemType } from '@/lib/types'
 import { TaskItemComponent } from './task-item'
 import { AuthConfig } from '@/lib/types'
@@ -68,6 +68,11 @@ function makeHeaders(config: AuthConfig) {
 export function WeekTaskComponent({ weekTask, config, defaultCliente, onHoursChange, defaultExpanded = true, onDelete, canDeleteTasks }: WeekTaskProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
   const [tasks, setTasks] = useState<TaskItemType[]>((weekTask.tasks || []) as TaskItemType[])
+
+  const totalEstimated = tasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0)
+  const totalLoaded = tasks.reduce((sum, t) =>
+    sum + ((t.lineas || []) as { horasLineaProyecto?: number }[]).reduce((s, l) => s + (l.horasLineaProyecto || 0), 0)
+  , 0)
   const [showNewTask, setShowNewTask] = useState(false)
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [savingTask, setSavingTask] = useState(false)
@@ -134,9 +139,22 @@ export function WeekTaskComponent({ weekTask, config, defaultCliente, onHoursCha
           {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </button>
         <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
-        <span className="text-sm font-semibold text-gray-700 flex-1">{weekTask.title}</span>
+        <span className="text-sm font-semibold text-gray-700 flex-1 min-w-0 truncate">{weekTask.title}</span>
         {onDelete && <DeleteConfirm onConfirm={(e) => { e.stopPropagation(); onDelete() }} label="semana" />}
-        <Badge variant="outline" className="text-xs text-gray-500">#{weekTask.id}</Badge>
+        <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+          {totalLoaded > 0 && (
+            <Badge variant="outline" className="text-xs gap-1 text-blue-700 border-blue-200">
+              <Clock className="w-3 h-3" />
+              {totalLoaded}h
+            </Badge>
+          )}
+          {totalEstimated > 0 && (
+            <Badge variant="secondary" className="text-xs text-gray-500">
+              {totalEstimated}h est.
+            </Badge>
+          )}
+        </div>
+        <Badge variant="outline" className="text-xs text-gray-400 shrink-0">#{weekTask.id}</Badge>
       </div>
 
       {expanded && (
