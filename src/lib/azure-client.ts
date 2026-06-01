@@ -66,11 +66,46 @@ export async function filterWorkItemsByAssignedToMe(config: AuthConfig, ids: num
   return result.workItems || []
 }
 
+function normalizeWeekDate(dateStr: string): string {
+  const cleaned = dateStr.replace(/[.\-]/g, '/')
+  const match = cleaned.match(/^(\d{1,2})\/(\d{1,2})$/)
+  if (!match) return cleaned
+  return `${parseInt(match[1])}/${parseInt(match[2])}`
+}
+
+function buildWeekMatchConditions(weekTitle: string): string {
+  const w = weekTitle.toLowerCase().replace(/\s+/g, ' ').trim()
+  const parts = w.split(/[\s]+/)
+  if (parts.length < 2) return `[System.Title] = '${weekTitle.replace(/'/g, "''")}'`
+
+  const firstOriginal = parts[0]
+  const lastOriginal = parts[parts.length - 1]
+
+  const firstNormalized = normalizeWeekDate(firstOriginal)
+  const lastNormalized = normalizeWeekDate(lastOriginal)
+
+  const variants: string[] = []
+  for (const sep of [' - ', ' al ', ' a ', ' to ', '-', '–']) {
+    const combos = [
+      `${firstNormalized}${sep}${lastNormalized}`,
+      firstOriginal !== firstNormalized ? `${firstOriginal}${sep}${lastNormalized}` : null,
+      lastOriginal !== lastNormalized ? `${firstNormalized}${sep}${lastOriginal}` : null,
+      firstOriginal !== firstNormalized && lastOriginal !== lastNormalized ? `${firstOriginal}${sep}${lastOriginal}` : null,
+    ].filter(Boolean) as string[]
+
+    for (const pattern of combos) {
+      const safePattern = pattern.replace(/'/g, "''")
+      variants.push(`[System.Title] = '${safePattern}'`)
+    }
+  }
+
+  return `(${variants.join(' OR ')})`
+}
+
 export async function getWorkItemsByWeek(config: AuthConfig, weekTitle: string): Promise<{ id: number }[]> {
-  // Escape single quotes for WIQL
-  const safe = weekTitle.replace(/'/g, "''")
+  const conditions = buildWeekMatchConditions(weekTitle)
   const wiql = {
-    query: `SELECT [System.Id] FROM WorkItems WHERE [System.WorkItemType] = 'Task' AND [System.Title] = '${safe}' ORDER BY [System.ChangedDate] DESC`,
+    query: `SELECT [System.Id] FROM WorkItems WHERE [System.WorkItemType] = 'Task' AND ${conditions} ORDER BY [System.ChangedDate] DESC`,
   }
 
   const result = await azureRequest<{ workItems: { id: number }[] }>(
