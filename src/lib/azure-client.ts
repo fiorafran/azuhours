@@ -84,18 +84,33 @@ function buildWeekMatchConditions(weekTitle: string): string {
   const firstNormalized = normalizeWeekDate(firstOriginal)
   const lastNormalized = normalizeWeekDate(lastOriginal)
 
+  const firstParts = firstOriginal.split('/')
+  const lastParts = lastOriginal.split('/')
+
+  const firstVariants = [
+    firstNormalized,
+    firstParts.length === 2 ? `${firstParts[0].padStart(2, '0')}/${firstParts[1]}` : firstNormalized,
+    firstParts.length === 2 ? `${parseInt(firstParts[0])}/${firstParts[1].padStart(2, '0')}` : firstNormalized,
+    firstParts.length === 2 ? `${firstParts[0].padStart(2, '0')}/${firstParts[1].padStart(2, '0')}` : firstNormalized,
+  ]
+  const lastVariants = [
+    lastNormalized,
+    lastParts.length === 2 ? `${lastParts[0].padStart(2, '0')}/${lastParts[1]}` : lastNormalized,
+    lastParts.length === 2 ? `${parseInt(lastParts[0])}/${lastParts[1].padStart(2, '0')}` : lastNormalized,
+    lastParts.length === 2 ? `${lastParts[0].padStart(2, '0')}/${lastParts[1].padStart(2, '0')}` : lastNormalized,
+  ]
+
+  const uniqueFirst = [...new Set(firstVariants)]
+  const uniqueLast = [...new Set(lastVariants)]
+
   const variants: string[] = []
   for (const sep of [' - ', ' al ', ' a ', ' to ', '-', '–']) {
-    const combos = [
-      `${firstNormalized}${sep}${lastNormalized}`,
-      firstOriginal !== firstNormalized ? `${firstOriginal}${sep}${lastNormalized}` : null,
-      lastOriginal !== lastNormalized ? `${firstNormalized}${sep}${lastOriginal}` : null,
-      firstOriginal !== firstNormalized && lastOriginal !== lastNormalized ? `${firstOriginal}${sep}${lastOriginal}` : null,
-    ].filter(Boolean) as string[]
-
-    for (const pattern of combos) {
-      const safePattern = pattern.replace(/'/g, "''")
-      variants.push(`[System.Title] = '${safePattern}'`)
+    for (const fv of uniqueFirst) {
+      for (const lv of uniqueLast) {
+        const pattern = `${fv}${sep}${lv}`
+        const safePattern = pattern.replace(/'/g, "''")
+        variants.push(`[System.Title] = '${safePattern}'`)
+      }
     }
   }
 

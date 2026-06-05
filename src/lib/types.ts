@@ -31,6 +31,8 @@ export interface WorkItem {
   dueDate?: string
   // Relation ids for parent
   parentId?: number
+  // Comment
+  comment?: string
 }
 
 export interface BacklogItem extends WorkItem {

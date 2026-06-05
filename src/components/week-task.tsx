@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ChevronDown, ChevronRight, Calendar, Plus, Trash2, Check, X, Clock } from 'lucide-react'
+import { ChevronDown, ChevronRight, Calendar, Plus, Trash2, Check, X, Clock, MessageSquare } from 'lucide-react'
 import { WeekTask as WeekTaskType, TaskItem as TaskItemType } from '@/lib/types'
 import { TaskItemComponent } from './task-item'
 import { AuthConfig } from '@/lib/types'
@@ -68,6 +68,11 @@ function makeHeaders(config: AuthConfig) {
 export function WeekTaskComponent({ weekTask, config, defaultCliente, onHoursChange, defaultExpanded = true, onDelete, canDeleteTasks }: WeekTaskProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
   const [tasks, setTasks] = useState<TaskItemType[]>((weekTask.tasks || []) as TaskItemType[])
+  const [comment, setComment] = useState(weekTask.comment || '')
+  const [showComments, setShowComments] = useState(false)
+  const [comments, setComments] = useState<Array<{ id: number; text: string; createdBy: { displayName: string }; createdDate: string }>>([])
+  const [loadingComments, setLoadingComments] = useState(false)
+  const [savingComment, setSavingComment] = useState(false)
 
   const totalEstimated = tasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0)
   const totalLoaded = tasks.reduce((sum, t) =>
@@ -105,6 +110,43 @@ export function WeekTaskComponent({ weekTask, config, defaultCliente, onHoursCha
     setNewTaskTitle('')
     setShowNewTask(true)
     setTimeout(() => inputRef.current?.focus(), 0)
+  }
+
+  async function loadComments() {
+    setLoadingComments(true)
+    try {
+      const res = await fetch(`/api/azure/comment?id=${weekTask.id}`, {
+        headers: makeHeaders(config),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Error loading comments')
+      setComments(data)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al cargar comentarios')
+    } finally {
+      setLoadingComments(false)
+    }
+  }
+
+  async function saveComment() {
+    if (!comment.trim()) return
+    setSavingComment(true)
+    try {
+      const res = await fetch('/api/azure/comment', {
+        method: 'POST',
+        headers: makeHeaders(config),
+        body: JSON.stringify({ id: weekTask.id, text: comment.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Error saving comment')
+      setComments((prev) => [...prev, data])
+      setComment('')
+      toast.success('Comentario guardado')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al guardar comentario')
+    } finally {
+      setSavingComment(false)
+    }
   }
 
   async function handleSaveTask() {
@@ -155,7 +197,49 @@ export function WeekTaskComponent({ weekTask, config, defaultCliente, onHoursCha
           )}
         </div>
         <Badge variant="outline" className="text-xs text-gray-400 shrink-0">#{weekTask.id}</Badge>
+        <button
+          onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); if (!showComments && comments.length === 0) loadComments() }}
+          className="text-gray-400 hover:text-blue-600 transition-colors shrink-0"
+          title="Comentarios"
+        >
+          <MessageSquare className="w-4 h-4" />
+        </button>
       </div>
+
+      {showComments && (
+        <div className="px-3 py-2 border-t border-gray-200/60 space-y-2" onClick={(e) => e.stopPropagation()}>
+          {loadingComments ? (
+            <p className="text-xs text-gray-400">Cargando comentarios...</p>
+          ) : comments.length === 0 ? (
+            <p className="text-xs text-gray-400">Sin comentarios</p>
+          ) : (
+            <div className="space-y-2">
+              {comments.map((c) => (
+                <div key={c.id} className="bg-white rounded p-2 text-xs">
+                  <div className="flex justify-between text-gray-500 mb-1">
+                    <span className="font-medium">{c.createdBy.displayName}</span>
+                    <span>{new Date(c.createdDate).toLocaleDateString('es-AR')}</span>
+                  </div>
+                  <p className="text-gray-700">{c.text}</p>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') saveComment() }}
+              placeholder="Agregar comentario..."
+              className="flex-1 text-sm border border-gray-300 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-blue-400"
+            />
+            <Button size="sm" onClick={saveComment} disabled={savingComment || !comment.trim()}>
+              {savingComment ? '...' : 'Enviar'}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {expanded && (
         <div className="px-3 pb-3 space-y-2 border-t border-gray-200/60">
