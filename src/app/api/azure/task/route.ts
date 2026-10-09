@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createTask, getCurrentUser, deleteWorkItem } from '@/lib/azure-client'
+import { createTask, getCurrentUser, deleteWorkItem, updateTaskDueDate } from '@/lib/azure-client'
+import { getTaskFieldMap, resolveField } from '@/lib/field-cache'
 import { AuthConfig } from '@/lib/types'
 import { checkRequest } from '@/lib/rate-limit'
 
@@ -38,6 +39,38 @@ export async function POST(req: NextRequest) {
       state: f['System.State'] as string,
       lineas: [],
     })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Error desconocido'
+    return NextResponse.json({ error: message }, { status: 400 })
+  }
+}
+
+// PATCH /api/azure/task - Update a Task's due date ({ id, dueDate: ISO string | null })
+export async function PATCH(req: NextRequest) {
+  const err = checkRequest(req)
+  if (err) return err
+  const config = getConfig(req)
+
+  try {
+    const body = await req.json()
+    const { id, dueDate } = body
+    const idNum = parseInt(id)
+    if (!id || isNaN(idNum) || idNum <= 0)
+      return NextResponse.json({ error: 'Missing or invalid id' }, { status: 400 })
+    if (dueDate !== null && (typeof dueDate !== 'string' || isNaN(Date.parse(dueDate))))
+      return NextResponse.json({ error: 'Invalid dueDate' }, { status: 400 })
+
+    const taskFieldMap = await getTaskFieldMap(config)
+    const dueDateRef = resolveField(taskFieldMap,
+      'fecha entrega',
+      'due date',
+      'fechaentrega',
+      'Microsoft.VSTS.Scheduling.DueDate'
+    )
+
+    const task = await updateTaskDueDate(config, idNum, dueDateRef, dueDate)
+    const f = task.fields as Record<string, unknown>
+    return NextResponse.json({ id: task.id, dueDate: (f[dueDateRef] as string | undefined) ?? null })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Error desconocido'
     return NextResponse.json({ error: message }, { status: 400 })

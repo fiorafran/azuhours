@@ -17,6 +17,7 @@ interface WeekTaskProps {
   defaultExpanded?: boolean
   onDelete?: () => void
   canDeleteTasks?: boolean
+  onTaskChange?: (task: TaskItemType) => void
 }
 
 function DeleteConfirm({ onConfirm, label }: { onConfirm: (e: React.MouseEvent) => void; label: string }) {
@@ -65,7 +66,7 @@ function makeHeaders(config: AuthConfig) {
   }
 }
 
-export function WeekTaskComponent({ weekTask, config, defaultCliente, onHoursChange, defaultExpanded = true, onDelete, canDeleteTasks }: WeekTaskProps) {
+export function WeekTaskComponent({ weekTask, config, defaultCliente, onHoursChange, defaultExpanded = true, onDelete, canDeleteTasks, onTaskChange }: WeekTaskProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
   const [tasks, setTasks] = useState<TaskItemType[]>((weekTask.tasks || []) as TaskItemType[])
   const [comment, setComment] = useState(weekTask.comment || '')
@@ -172,34 +173,34 @@ export function WeekTaskComponent({ weekTask, config, defaultCliente, onHoursCha
   }
 
   return (
-    <div className="border border-gray-200 rounded-lg bg-gray-50/50">
+    <div className="border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
       <div
-        className="flex items-center gap-2 px-3 py-2.5 cursor-pointer hover:bg-gray-100/60 rounded-lg"
+        className="flex items-center gap-2 px-3 py-2.5 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/60 rounded-lg"
         onClick={() => setExpanded(!expanded)}
       >
-        <button className="text-gray-400 shrink-0">
+        <button className="text-gray-400 dark:text-gray-500 shrink-0">
           {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </button>
-        <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
-        <span className="text-sm font-semibold text-gray-700 flex-1 min-w-0 truncate">{weekTask.title}</span>
+        <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0" />
+        <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 flex-1 min-w-0 truncate">{weekTask.title}</span>
         {onDelete && <DeleteConfirm onConfirm={(e) => { e.stopPropagation(); onDelete() }} label="semana" />}
         <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
           {totalLoaded > 0 && (
-            <Badge variant="outline" className="text-xs gap-1 text-blue-700 border-blue-200">
+            <Badge variant="outline" className="text-xs gap-1 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800">
               <Clock className="w-3 h-3" />
               {totalLoaded}h
             </Badge>
           )}
           {totalEstimated > 0 && (
-            <Badge variant="secondary" className="text-xs text-gray-500">
+            <Badge variant="secondary" className="text-xs text-gray-500 dark:text-gray-400">
               {totalEstimated}h est.
             </Badge>
           )}
         </div>
-        <Badge variant="outline" className="text-xs text-gray-400 shrink-0">#{weekTask.id}</Badge>
+        <Badge variant="outline" className="text-xs text-gray-400 dark:text-gray-500 shrink-0">#{weekTask.id}</Badge>
         <button
           onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); if (!showComments && comments.length === 0) loadComments() }}
-          className="text-gray-400 hover:text-blue-600 transition-colors shrink-0"
+          className="text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors shrink-0"
           title="Comentarios"
         >
           <MessageSquare className="w-4 h-4" />
@@ -207,20 +208,20 @@ export function WeekTaskComponent({ weekTask, config, defaultCliente, onHoursCha
       </div>
 
       {showComments && (
-        <div className="px-3 py-2 border-t border-gray-200/60 space-y-2" onClick={(e) => e.stopPropagation()}>
+        <div className="px-3 py-2 border-t border-gray-200/60 dark:border-gray-700/60 space-y-2" onClick={(e) => e.stopPropagation()}>
           {loadingComments ? (
-            <p className="text-xs text-gray-400">Cargando comentarios...</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">Cargando comentarios...</p>
           ) : comments.length === 0 ? (
-            <p className="text-xs text-gray-400">Sin comentarios</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">Sin comentarios</p>
           ) : (
             <div className="space-y-2">
               {comments.map((c) => (
-                <div key={c.id} className="bg-white rounded p-2 text-xs">
-                  <div className="flex justify-between text-gray-500 mb-1">
+                <div key={c.id} className="bg-white dark:bg-gray-800 rounded p-2 text-xs">
+                  <div className="flex justify-between text-gray-500 dark:text-gray-400 mb-1">
                     <span className="font-medium">{c.createdBy.displayName}</span>
                     <span>{new Date(c.createdDate).toLocaleDateString('es-AR')}</span>
                   </div>
-                  <p className="text-gray-700">{c.text}</p>
+                  <p className="text-gray-700 dark:text-gray-200">{c.text}</p>
                 </div>
               ))}
             </div>
@@ -232,7 +233,7 @@ export function WeekTaskComponent({ weekTask, config, defaultCliente, onHoursCha
               onChange={(e) => setComment(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') saveComment() }}
               placeholder="Agregar comentario..."
-              className="flex-1 text-sm border border-gray-300 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-blue-400"
+              className="flex-1 text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-blue-400 dark:bg-gray-900 dark:text-gray-100"
             />
             <Button size="sm" onClick={saveComment} disabled={savingComment || !comment.trim()}>
               {savingComment ? '...' : 'Enviar'}
@@ -242,9 +243,9 @@ export function WeekTaskComponent({ weekTask, config, defaultCliente, onHoursCha
       )}
 
       {expanded && (
-        <div className="px-3 pb-3 space-y-2 border-t border-gray-200/60">
+        <div className="px-3 pb-3 space-y-2 border-t border-gray-200/60 dark:border-gray-700/60">
           {tasks.length === 0 && !showNewTask ? (
-            <p className="text-sm text-gray-400 py-2 text-center">Sin tareas en esta semana</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 py-2 text-center">Sin tareas en esta semana</p>
           ) : (
             <div className="pt-2 space-y-2">
               {tasks.map((task) => (
@@ -255,6 +256,11 @@ export function WeekTaskComponent({ weekTask, config, defaultCliente, onHoursCha
                   defaultCliente={defaultCliente}
                   onHoursChange={onHoursChange}
                   onDelete={canDeleteTasks ? () => handleDeleteTask(task.id) : undefined}
+                  onDueDateChange={(dueDate) => {
+                    const updated = { ...task, dueDate: dueDate ?? undefined }
+                    setTasks((prev) => prev.map((t) => (t.id === task.id ? updated : t)))
+                    onTaskChange?.(updated)
+                  }}
                 />
               ))}
             </div>

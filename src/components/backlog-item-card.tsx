@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ChevronDown, ChevronRight, Briefcase, Pencil, Check, X, Loader2 } from 'lucide-react'
-import { BacklogItem, WeekTask as WeekTaskType } from '@/lib/types'
+import { BacklogItem, TaskItem, WeekTask as WeekTaskType } from '@/lib/types'
 import { WeekTaskComponent } from './week-task'
 import { AuthConfig } from '@/lib/types'
 import { toast } from 'sonner'
@@ -28,6 +28,7 @@ interface BacklogItemCardProps {
   config: AuthConfig
   onHoursChange?: (delta: number) => void
   onUpdate?: (id: number, updates: { title: string; state: string; boardColumn: string | null }) => void
+  onTaskChange?: (weekTaskId: number, task: TaskItem) => void
 }
 
 function makeHeaders(config: AuthConfig) {
@@ -39,7 +40,7 @@ function makeHeaders(config: AuthConfig) {
   }
 }
 
-export function BacklogItemCard({ item, config, onHoursChange, onUpdate }: BacklogItemCardProps) {
+export function BacklogItemCard({ item, config, onHoursChange, onUpdate, onTaskChange }: BacklogItemCardProps) {
   const [expanded, setExpanded] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [editTitle, setEditTitle] = useState(item.title)
@@ -142,14 +143,14 @@ export function BacklogItemCard({ item, config, onHoursChange, onUpdate }: Backl
   }
 
   return (
-    <Card className="shadow-sm border-gray-200 py-0 gap-0">
+    <Card className="shadow-sm border-gray-200 dark:border-gray-700 py-0 gap-0 bg-white dark:bg-gray-900">
       {isEditing ? (
         <div
           className="flex items-center gap-2 py-3 px-4"
           onClick={(e) => e.stopPropagation()}
         >
           <Briefcase className="w-4 h-4 text-blue-500 shrink-0" />
-          <Badge variant="outline" className="text-xs text-gray-400 font-mono shrink-0">
+          <Badge variant="outline" className="text-xs text-gray-400 dark:text-gray-500 font-mono shrink-0">
             #{item.id}
           </Badge>
           <input
@@ -162,24 +163,24 @@ export function BacklogItemCard({ item, config, onHoursChange, onUpdate }: Backl
               if (e.key === 'Escape') cancelEdit(e as unknown as React.MouseEvent)
             }}
             disabled={saving}
-            className="flex-1 min-w-0 text-sm font-semibold border border-blue-300 rounded-md px-2.5 py-1 outline-none focus:ring-1 focus:ring-blue-400 bg-white"
+            className="flex-1 min-w-0 text-sm font-semibold border border-blue-300 dark:border-blue-700 rounded-md px-2.5 py-1 outline-none focus:ring-1 focus:ring-blue-400 bg-white dark:bg-gray-800 dark:text-gray-100"
           />
           {loadingContext ? (
-            <div className="flex items-center gap-1.5 shrink-0 text-gray-400">
+            <div className="flex items-center gap-1.5 shrink-0 text-gray-400 dark:text-gray-500">
               <Loader2 className="w-4 h-4 animate-spin" />
               <span className="text-xs">Cargando…</span>
             </div>
           ) : boardCtx && boardCtx.columns.length > 0 ? (
             <div className="shrink-0 flex flex-col gap-0.5">
-              <span className="text-[10px] text-gray-400 leading-none pl-1">
+              <span className="text-[10px] text-gray-400 dark:text-gray-500 leading-none pl-1">
                 Actual:{' '}
-                <span className="font-medium text-gray-600">{currentColumn || '—'}</span>
+                <span className="font-medium text-gray-600 dark:text-gray-300">{currentColumn || '—'}</span>
               </span>
               <select
                 value={editColumn}
                 onChange={(e) => setEditColumn(e.target.value)}
                 disabled={saving}
-                className="text-xs border border-gray-300 rounded-md px-2 py-1 outline-none focus:ring-1 focus:ring-blue-400 bg-white text-gray-700 max-w-[200px]"
+                className="text-xs border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 outline-none focus:ring-1 focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 max-w-[200px]"
               >
                 {boardCtx.columns.map((c) => (
                   <option key={c.name} value={c.name}>{c.name}</option>
@@ -198,7 +199,7 @@ export function BacklogItemCard({ item, config, onHoursChange, onUpdate }: Backl
           <button
             onClick={cancelEdit}
             disabled={saving}
-            className="text-gray-400 hover:text-gray-600 transition-colors shrink-0"
+            className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
@@ -208,7 +209,7 @@ export function BacklogItemCard({ item, config, onHoursChange, onUpdate }: Backl
           className="group flex items-center gap-2 py-4 px-4 cursor-pointer"
           onClick={() => setExpanded(!expanded)}
         >
-          <span className="text-gray-400 shrink-0">
+          <span className="text-gray-400 dark:text-gray-500 shrink-0">
             {expanded ? (
               <ChevronDown className="w-5 h-5" />
             ) : (
@@ -217,16 +218,16 @@ export function BacklogItemCard({ item, config, onHoursChange, onUpdate }: Backl
           </span>
           <Briefcase className="w-4 h-4 text-blue-500 shrink-0" />
           <div className="flex items-center gap-2 flex-1 min-w-0">
-            <Badge variant="outline" className="text-xs text-gray-400 font-mono shrink-0">
+            <Badge variant="outline" className="text-xs text-gray-400 dark:text-gray-500 font-mono shrink-0">
               #{item.id}
             </Badge>
-            <span className="font-semibold text-gray-900 truncate">{item.title}</span>
+            <span className="font-semibold text-gray-900 dark:text-gray-100 truncate">{item.title}</span>
           </div>
           <Badge
             className={`shrink-0 text-xs ${
               item.state === 'Closed'
-                ? 'bg-gray-100 text-gray-500'
-                : 'bg-blue-100 text-blue-700'
+                ? 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
+                : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
             }`}
             variant="secondary"
           >
@@ -234,7 +235,7 @@ export function BacklogItemCard({ item, config, onHoursChange, onUpdate }: Backl
           </Badge>
           <button
             onClick={openEdit}
-            className="text-gray-300 hover:text-gray-600 transition-colors opacity-0 group-hover:opacity-100 shrink-0"
+            className="text-gray-300 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-400 transition-colors opacity-0 group-hover:opacity-100 shrink-0"
             title="Editar ticket"
           >
             <Pencil className="w-3.5 h-3.5" />
@@ -246,7 +247,7 @@ export function BacklogItemCard({ item, config, onHoursChange, onUpdate }: Backl
         <CardContent className="pt-0 px-4 pb-4">
           <div className="ml-6 space-y-2">
             {weekTasks.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-2">Sin semanas asignadas</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-2">Sin semanas asignadas</p>
             ) : (
               weekTasks.map((weekTask) => (
                 <WeekTaskComponent
@@ -256,6 +257,7 @@ export function BacklogItemCard({ item, config, onHoursChange, onUpdate }: Backl
                   defaultCliente={item.clienteName || item.title}
                   onHoursChange={onHoursChange}
                   canDeleteTasks
+                  onTaskChange={(task) => onTaskChange?.(weekTask.id, task)}
                 />
               ))
             )}

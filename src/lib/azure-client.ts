@@ -317,6 +317,27 @@ export async function createTask(
   )
 }
 
+export async function updateTaskDueDate(
+  config: AuthConfig,
+  taskId: number,
+  dueDateRef: string,
+  dueDate: string | null
+) {
+  const ops = dueDate
+    ? [{ op: 'add', path: `/fields/${dueDateRef}`, value: dueDate }]
+    : [{ op: 'remove', path: `/fields/${dueDateRef}` }]
+
+  return azureRequest<{ id: number; fields: Record<string, unknown> }>(
+    config,
+    `${projectPath(config)}/_apis/wit/workitems/${taskId}`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json-patch+json' },
+      body: JSON.stringify(ops),
+    }
+  )
+}
+
 export async function deleteWorkItem(config: AuthConfig, id: number) {
   return azureRequest<void>(
     config,

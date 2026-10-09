@@ -7,6 +7,7 @@ import { ChevronDown, ChevronRight, Plus, Clock, Trash2, Check, X, MessageSquare
 import { TaskItem as TaskItemType, LineaItem } from '@/lib/types'
 import { LineaRow } from './linea-row'
 import { LineaForm, LineaFormValues } from './linea-form'
+import { DueDatePicker } from './due-date-picker'
 import { toast } from 'sonner'
 import { AuthConfig } from '@/lib/types'
 
@@ -16,6 +17,23 @@ interface TaskItemProps {
   defaultCliente?: string
   onHoursChange?: (delta: number) => void
   onDelete?: () => void
+  onDueDateChange?: (dueDate: string | null) => void
+}
+
+// ISO de Azure → "yyyy-mm-dd" en hora local (para <input type="date">)
+function isoToLocalInput(iso?: string | null): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return ''
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${mm}-${dd}`
+}
+
+// "yyyy-mm-dd" → ISO de la medianoche local (igual que lo guarda el tablero)
+function localInputToIso(value: string): string {
+  const [y, m, d] = value.split('-').map(Number)
+  return new Date(y, m - 1, d).toISOString()
 }
 
 function DeleteConfirm({ onConfirm }: { onConfirm: (e: React.MouseEvent) => void }) {
@@ -64,7 +82,7 @@ function makeHeaders(config: AuthConfig) {
   }
 }
 
-export function TaskItemComponent({ task, config, defaultCliente, onHoursChange, onDelete }: TaskItemProps) {
+export function TaskItemComponent({ task, config, defaultCliente, onHoursChange, onDelete, onDueDateChange }: TaskItemProps) {
   const [expanded, setExpanded] = useState(false)
   const [lineas, setLineas] = useState<LineaItem[]>((task.lineas as LineaItem[]) || [])
   const [showAddForm, setShowAddForm] = useState(false)
@@ -74,6 +92,8 @@ export function TaskItemComponent({ task, config, defaultCliente, onHoursChange,
   const [comments, setComments] = useState<Array<{ id: number; text: string; createdBy: { displayName: string }; createdDate: string }>>([])
   const [loadingComments, setLoadingComments] = useState(false)
   const [savingComment, setSavingComment] = useState(false)
+  const [dueDate, setDueDate] = useState<string | null>(task.dueDate ?? null)
+  const [savingDueDate, setSavingDueDate] = useState(false)
 
   const totalHoras = lineas.reduce((sum, l) => sum + (l.horasLineaProyecto || 0), 0)
 
@@ -134,6 +154,32 @@ export function TaskItemComponent({ task, config, defaultCliente, onHoursChange,
     toast.success('Línea eliminada')
   }
 
+  async function handleDueDateChange(value: string) {
+    const newDueDate = value ? localInputToIso(value) : null
+    if (isoToLocalInput(newDueDate) === isoToLocalInput(dueDate)) return
+    const prev = dueDate
+    setDueDate(newDueDate)
+    setSavingDueDate(true)
+    try {
+      const res = await fetch('/api/azure/task', {
+        method: 'PATCH',
+        headers: makeHeaders(config),
+        body: JSON.stringify({ id: task.id, dueDate: newDueDate }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Error al actualizar fecha')
+      const saved = (data.dueDate as string | null) ?? null
+      setDueDate(saved)
+      onDueDateChange?.(saved)
+      toast.success(saved ? 'Fecha asignada' : 'Fecha quitada')
+    } catch (err) {
+      setDueDate(prev)
+      toast.error(err instanceof Error ? err.message : 'Error al actualizar fecha')
+    } finally {
+      setSavingDueDate(false)
+    }
+  }
+
   async function loadComments() {
     setLoadingComments(true)
     try {
@@ -172,31 +218,36 @@ export function TaskItemComponent({ task, config, defaultCliente, onHoursChange,
   }
 
   return (
-    <div className="border border-gray-100 rounded-lg bg-white">
+    <div className="border border-gray-100 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
       <div
-        className="flex items-center gap-2 px-3 py-2.5 cursor-pointer hover:bg-gray-50 rounded-lg"
+        className="flex items-center gap-2 px-3 py-2.5 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg"
         onClick={() => setExpanded(!expanded)}
       >
-        <button className="text-gray-400 shrink-0">
+        <button className="text-gray-400 dark:text-gray-500 shrink-0">
           {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </button>
-        <span className="text-sm font-medium text-gray-800 flex-1 min-w-0 truncate">{task.title}</span>
+        <span className="text-sm font-medium text-gray-800 dark:text-gray-200 flex-1 min-w-0 truncate">{task.title}</span>
         <div className="flex items-center gap-2 shrink-0">
+          <DueDatePicker
+            value={isoToLocalInput(dueDate)}
+            onChange={handleDueDateChange}
+            disabled={savingDueDate}
+          />
           {totalHoras > 0 && (
-            <Badge variant="outline" className="text-xs gap-1 text-blue-700 border-blue-200">
+            <Badge variant="outline" className="text-xs gap-1 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800">
               <Clock className="w-3 h-3" />
               {totalHoras}h cargadas
             </Badge>
           )}
           {task.estimatedHours != null && task.estimatedHours > 0 && (
-            <Badge variant="secondary" className="text-xs text-gray-500">
+            <Badge variant="secondary" className="text-xs text-gray-500 dark:text-gray-400">
               {task.estimatedHours}h est.
             </Badge>
           )}
           {onDelete && <DeleteConfirm onConfirm={(e) => { e.stopPropagation(); onDelete() }} />}
           <button
             onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); if (!showComments && comments.length === 0) loadComments() }}
-            className="text-gray-400 hover:text-blue-600 transition-colors"
+            className="text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
             title="Comentarios"
           >
             <MessageSquare className="w-4 h-4" />
@@ -205,20 +256,20 @@ export function TaskItemComponent({ task, config, defaultCliente, onHoursChange,
       </div>
 
       {showComments && (
-        <div className="px-3 py-2 border-t border-gray-50 space-y-2" onClick={(e) => e.stopPropagation()}>
+        <div className="px-3 py-2 border-t border-gray-100 dark:border-gray-700 space-y-2" onClick={(e) => e.stopPropagation()}>
           {loadingComments ? (
-            <p className="text-xs text-gray-400">Cargando comentarios...</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">Cargando comentarios...</p>
           ) : comments.length === 0 ? (
-            <p className="text-xs text-gray-400">Sin comentarios</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">Sin comentarios</p>
           ) : (
             <div className="space-y-2">
               {comments.map((c) => (
-                <div key={c.id} className="bg-gray-50 rounded p-2 text-xs">
-                  <div className="flex justify-between text-gray-500 mb-1">
+                <div key={c.id} className="bg-gray-50 dark:bg-gray-900 rounded p-2 text-xs">
+                  <div className="flex justify-between text-gray-500 dark:text-gray-400 mb-1">
                     <span className="font-medium">{c.createdBy.displayName}</span>
                     <span>{new Date(c.createdDate).toLocaleDateString('es-AR')}</span>
                   </div>
-                  <p className="text-gray-700">{c.text}</p>
+                  <p className="text-gray-700 dark:text-gray-200">{c.text}</p>
                 </div>
               ))}
             </div>
@@ -230,7 +281,7 @@ export function TaskItemComponent({ task, config, defaultCliente, onHoursChange,
               onChange={(e) => setComment(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') saveComment() }}
               placeholder="Agregar comentario..."
-              className="flex-1 text-sm border border-gray-300 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-blue-400"
+              className="flex-1 text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-blue-400 dark:bg-gray-900 dark:text-gray-100"
             />
             <Button size="sm" onClick={saveComment} disabled={savingComment || !comment.trim()}>
               {savingComment ? '...' : 'Enviar'}
@@ -240,12 +291,12 @@ export function TaskItemComponent({ task, config, defaultCliente, onHoursChange,
       )}
 
       {expanded && (
-        <div className="px-3 pb-3 border-t border-gray-50">
+        <div className="px-3 pb-3 border-t border-gray-100 dark:border-gray-700">
           <div className="pt-1">
             {lineas.length === 0 && (
-              <p className="text-sm text-gray-400 py-2 text-center">Sin horas cargadas aún</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 py-2 text-center">Sin horas cargadas aún</p>
             )}
-            <div className="divide-y divide-gray-50">
+            <div className="divide-y divide-gray-50 dark:divide-gray-700/50">
               {lineas.map((linea) => (
                 <LineaRow
                   key={linea.id}

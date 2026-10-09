@@ -65,15 +65,15 @@ export function WeekProgress({ totalHours, breakdown = [], className = '' }: Wee
   const mid = Math.round(goal / 2)
 
   return (
-    <div className={`bg-white border border-gray-200 rounded-xl px-4 py-3 shadow-sm ${className}`}>
+    <div className={`bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 shadow-sm ${className}`}>
       <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-1 text-gray-600" style={{ fontSize: 13 }}>
+        <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400" style={{ fontSize: 13 }}>
           <Clock className="w-3.5 h-3.5 shrink-0" />
           <span className="whitespace-nowrap">Progreso semanal</span>
         </div>
 
         <div className="flex items-center gap-1">
-          <span className={`font-semibold font-mono ${textColor}`} style={{ fontSize: 13 }}>
+          <span className={`font-semibold font-mono ${textColor} dark:opacity-80`} style={{ fontSize: 13 }}>
             {totalHours}h /&nbsp;
           </span>
 
@@ -90,13 +90,13 @@ export function WeekProgress({ totalHours, breakdown = [], className = '' }: Wee
                   if (e.key === 'Escape') setEditing(false)
                 }}
                 onBlur={commitEdit}
-                className="w-14 text-sm font-semibold font-mono text-center border border-blue-400 rounded px-1 py-0 outline-none focus:ring-1 focus:ring-blue-400"
+                className="w-14 text-sm font-semibold font-mono text-center border border-blue-400 dark:border-blue-600 rounded px-1 py-0 outline-none focus:ring-1 focus:ring-blue-400 bg-white dark:bg-gray-800 dark:text-gray-100"
               />
-              <span className={`font-semibold font-mono ${textColor}`} style={{ fontSize: 13 }}>h</span>
+              <span className={`font-semibold font-mono ${textColor} dark:opacity-80`} style={{ fontSize: 13 }}>h</span>
               {goal !== DEFAULT_GOAL && (
                 <button
                   onMouseDown={(e) => { e.preventDefault(); resetGoal() }}
-                  className="text-gray-400 hover:text-gray-600 ml-1"
+                  className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400 ml-1"
                   title="Volver a 40h"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
@@ -106,40 +106,40 @@ export function WeekProgress({ totalHours, breakdown = [], className = '' }: Wee
           ) : (
             <button
               onClick={() => setEditing(true)}
-              className={`flex items-center gap-1 font-semibold font-mono ${textColor} hover:opacity-70 group`}
+              className={`flex items-center gap-1 font-semibold font-mono ${textColor} dark:opacity-80 hover:opacity-70 group`}
               style={{ fontSize: 13 }}
               title="Cambiar meta semanal"
             >
               {goal}h
               {over && (
-                <span className="text-xs font-normal text-gray-400 ml-1">
+                <span className="text-xs font-normal text-gray-400 dark:text-gray-500 ml-1">
                   (+{totalHours - goal}h extra)
                 </span>
               )}
-              <Pencil className="w-3 h-3 text-gray-300 group-hover:text-gray-500 ml-0.5" />
+              <Pencil className="w-3 h-3 text-gray-300 dark:text-gray-600 group-hover:text-gray-500 dark:group-hover:text-gray-400 ml-0.5" />
             </button>
           )}
         </div>
       </div>
 
-      <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+      <div className="h-2.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
         <div
           className={`h-full rounded-full transition-all duration-500 ${color}`}
           style={{ width: `${pct}%` }}
         />
       </div>
 
-      <div className="flex justify-between text-xs text-gray-300 mt-1">
+      <div className="flex justify-between text-xs text-gray-300 dark:text-gray-500 mt-1">
         <span>0h</span>
         <span>{mid}h</span>
         <span>{goal}h</span>
       </div>
 
       {breakdown.length > 0 && (
-        <div className="mt-2 border-t border-gray-100">
+        <div className="mt-2 border-t border-gray-100 dark:border-gray-700/50">
           <button
             onClick={() => setExpanded((v) => !v)}
-            className="w-full flex items-center justify-between pt-2 pb-0.5 text-xs text-gray-400 hover:text-gray-600 transition-colors group"
+            className="w-full flex items-center justify-between pt-2 pb-0.5 text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 transition-colors group"
           >
             <span className="font-medium">
               {breakdown.length} proyecto{breakdown.length !== 1 ? 's' : ''} con horas
@@ -162,14 +162,14 @@ export function WeekProgress({ totalHours, breakdown = [], className = '' }: Wee
                   const pPct = Math.min((p.hours / totalHours) * 100, 100)
                   return (
                     <div key={p.title} className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500 truncate flex-1 min-w-0">{p.title}</span>
-                      <div className="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden shrink-0">
+                      <span className="text-xs text-gray-500 dark:text-gray-400 truncate flex-1 min-w-0">{p.title}</span>
+                      <div className="w-24 h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden shrink-0">
                         <div
-                          className="h-full rounded-full bg-blue-400 transition-all duration-500"
+                          className="h-full rounded-full bg-blue-400 dark:bg-blue-500 transition-all duration-500"
                           style={{ width: expanded ? `${pPct}%` : '0%' }}
                         />
                       </div>
-                      <span className="text-xs font-mono font-medium text-gray-600 w-10 text-right shrink-0">
+                      <span className="text-xs font-mono font-medium text-gray-600 dark:text-gray-400 w-10 text-right shrink-0">
                         {p.hours}h
                       </span>
                     </div>
